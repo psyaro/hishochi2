@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本全国250mメッシュ標高調査システム</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --border-color: rgba(240, 246, 252, 0.1);
+            --primary-glow: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            --accent-glow: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);
+            --text-main: #f0f6fc;
+            --text-sub: #8b949e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(79, 172, 254, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        .container { width: 100%; max-width: 650px; z-index: 10; }
+        header { text-align: center; margin-bottom: 30px; animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        header h1 {
+            font-size: 2.2rem; font-weight: 800;
+            background: linear-gradient(120deg, #00f2fe, #4facfe, #00f2fe);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 10px; letter-spacing: -0.5px; animation: shine 4s linear infinite;
+        }
+        header p { font-size: 0.95rem; color: var(--text-sub); font-weight: 300; }
+        .card {
+            background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-radius: 24px; padding: 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); margin-bottom: 25px;
+        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .input-group label {
+            font-size: 0.85rem; color: var(--text-sub); font-weight: 600;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .input-group input {
+            background: rgba(13, 17, 23, 0.6); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 14px 18px; font-size: 1.1rem; color: var(--text-main);
+            font-family: inherit; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .input-group input:focus {
+            outline: none; border-color: #4facfe; box-shadow: 0 0 15px rgba(79, 172, 254, 0.2);
+            background: rgba(13, 17, 23, 0.8);
+        }
+        .btn-submit {
+            width: 100%; background: var(--primary-glow); border: none; border-radius: 14px;
+            padding: 16px; color: #ffffff; font-size: 1.05rem; font-weight: 600; font-family: inherit;
+            cursor: pointer; box-shadow: 0 8px 20px rgba(0, 242, 254, 0.25);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); letter-spacing: 1px;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0, 242, 254, 0.35); filter: brightness(1.1); }
+        .btn-submit:active { transform: translateY(0); }
+        .result-container {
+            display: none; margin-top: 30px; padding-top: 25px;
+            border-top: 1px solid var(--border-color); animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .result-title {
+            font-size: 0.9rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+        }
+        .result-title::before {
+            content: ''; display: inline-block; width: 6px; height: 6px;
+            border-radius: 50%; background-color: #00f2fe;
+        }
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .result-box {
+            background: rgba(13, 17, 23, 0.4); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 20px; position: relative; overflow: hidden;
+        }
+        .result-box::after { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .result-box.average::after { background: var(--primary-glow); }
+        .result-box.minimum::after { background: var(--accent-glow); }
+        .result-label { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 8px; font-weight: 400; }
+        .result-val { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+        .result-unit { font-size: 1rem; font-weight: 400; color: var(--text-sub); margin-left: 4px; }
+        .ocean-tag {
+            grid-column: span 2; background: rgba(79, 172, 254, 0.1);
+            border: 1px dashed rgba(79, 172, 254, 0.3); border-radius: 12px;
+            padding: 12px; text-align: center; font-size: 0.9rem; color: #00f2fe;
+        }
+        .credit {
+            text-align: center; margin-top: 25px; font-size: 0.78rem; line-height: 1.7; color: var(--text-sub);
+        }
+        .credit a { color: #4facfe; text-decoration: none; }
+        .credit a:hover { text-decoration: underline; }
+        @keyframes shine { to { background-position: 200% auto; } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GEO-ELEVATION PORTAL</h1>
+            <p>日本全土 250mメッシュ高精度標高調査システム</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <form id="searchForm" onsubmit="searchElevation(event)">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="lat">緯度 (Latitude)</label>
+                            <input type="number" id="lat" name="lat" step="any" min="20.0" max="46.0" placeholder="例: 35.3606" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="lon">経度 (Longitude)</label>
+                            <input type="number" id="lon" name="lon" step="any" min="122.0" max="155.0" placeholder="例: 138.7273" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit">調査開始 (Query Data)</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <div class="result-title">調査結果 (Search Results)</div>
+                    <div class="result-grid" id="resultGrid"></div>
+                </div>
+            </div>
+
+            <!-- ボロノイ地図へのリンク -->
+            <div style="text-align:center; margin-top:20px;">
+                <a href="voronoi.html" style="
+                    display:inline-block; padding:12px 28px;
+                    background:rgba(79,172,254,0.12);
+                    border:1px solid rgba(79,172,254,0.35);
+                    border-radius:12px; color:#4facfe;
+                    font-size:0.9rem; text-decoration:none;
+                    transition:background 0.2s;
+                " onmouseover="this.style.background='rgba(79,172,254,0.22)'"
+                   onmouseout="this.style.background='rgba(79,172,254,0.12)'">
+                    🗾 全国駅ボロノイ標高地図を見る →
+                </a>
+            </div>
+
+            <footer class="credit">
+                標高データ出典:
+                <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-d.html" target="_blank" rel="noopener">
+                    国土数値情報「標高・傾斜度5次メッシュデータ（G04-d）」（国土交通省）
+                </a>
+                を加工して作成。
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // ▼▼▼ デプロイ後、Cloud Function のトリガーURLに書き換えてください ▼▼▼
+        // 例: https://asia-northeast1-PROJECT_ID.cloudfunctions.net/elevation
+        const API_BASE = "https://REGION-PROJECT_ID.cloudfunctions.net/elevation";
+        // ▲▲▲ 第2世代の場合は Cloud Run の *.run.app URL になることがあります ▲▲▲
+
+        document.getElementById('lat').value = "35.3606";
+        document.getElementById('lon').value = "138.7273";
+
+        function searchElevation(event) {
+            event.preventDefault();
+            const lat = document.getElementById('lat').value;
+            const lon = document.getElementById('lon').value;
+            const btn = document.querySelector('.btn-submit');
+
+            btn.textContent = 'データ解析中...';
+            btn.disabled = true;
+
+            const url = `${API_BASE}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(res => {
+                    btn.textContent = '調査開始 (Query Data)';
+                    btn.disabled = false;
+
+                    const container = document.getElementById('resultContainer');
+                    const grid = document.getElementById('resultGrid');
+                    container.style.display = 'block';
+                    grid.innerHTML = '';
+
+                    if (res.status === 'success') {
+                        const data = res.data;
+                        if (data.is_ocean) {
+                            grid.innerHTML = `
+                                <div class="ocean-tag">
+                                    🌊 指定された座標は「海域」または「未計測領域」です (標高データがありません)。
+                                </div>`;
+                        } else {
+                            const avgVal = data.average_elevation_m !== null ? data.average_elevation_m : 'N/A';
+                            const minVal = data.minimum_elevation_m !== null ? data.minimum_elevation_m : 'N/A';
+                            grid.innerHTML = `
+                                <div class="result-box average">
+                                    <div class="result-label">平均標高 (Average Elevation)</div>
+                                    <div class="result-val" id="avgCounter">${avgVal}<span class="result-unit">m</span></div>
+                                </div>
+                                <div class="result-box minimum">
+                                    <div class="result-label">最低標高 (Minimum Elevation)</div>
+                                    <div class="result-val" id="minCounter">${minVal}<span class="result-unit">m</span></div>
+                                </div>`;
+                            animateValue("avgCounter", 0, data.average_elevation_m, 600);
+                            animateValue("minCounter", 0, data.minimum_elevation_m, 600);
+                        }
+                    } else {
+                        grid.innerHTML = `
+                            <div class="ocean-tag" style="background: rgba(255, 8, 68, 0.1); border-color: rgba(255, 8, 68, 0.3); color: #ffb199;">
+                                ⚠️ エラー: ${res.message}
+                            </div>`;
+                    }
+                })
+                .catch(err => {
+                    btn.textContent = '調査開始 (Query Data)';
+                    btn.disabled = false;
+                    alert('通信エラーが発生しました。API_BASE のURLが正しいか、関数が稼働しているか確認してください。');
+                });
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (end === null || isNaN(end)) return;
+            const obj = document.getElementById(id);
+            const range = end - start;
+            let current = start;
+            const increment = range / (duration / 16);
+            const step = () => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    obj.innerHTML = `${end.toFixed(1)}<span class="result-unit">m</span>`;
+                } else {
+                    obj.innerHTML = `${current.toFixed(1)}<span class="result-unit">m</span>`;
+                    requestAnimationFrame(step);
+                }
+            };
+            requestAnimationFrame(step);
+        }
+    </script>
+</body>
+</html>

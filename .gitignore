@@ -1,0 +1,22 @@
+# 生成データ（大容量 / ローカル専用）— ルート直下の data/ のみ除外
+/data/
+
+# ソースデータ（大容量 zip・GML など）
+downloads/
+
+# Cloud Function デプロイ時に一時コピーする npz
+cloud_function/*.npz
+
+# ローカル開発サーバー
+docs/serve.bat
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# IDE
+.vscode/
+.idea/

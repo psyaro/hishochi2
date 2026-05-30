@@ -1,0 +1,6 @@
+# gcloud デプロイ時に除外するファイル
+.git
+.gitignore
+__pycache__/
+*.pyc
+README_DEPLOY.md
