@@ -136,10 +136,10 @@
                 </div>
             </div>
 
-            <!-- ボロノイ地図へのリンク -->
-            <div style="text-align:center; margin-top:20px;">
+            <!-- 地図へのリンク -->
+            <div style="text-align:center; margin-top:20px; display:flex; flex-direction:column; gap:12px; align-items:center;">
                 <a href="voronoi.html" style="
-                    display:inline-block; padding:12px 28px;
+                    display:inline-block; padding:12px 28px; width:340px;
                     background:rgba(79,172,254,0.12);
                     border:1px solid rgba(79,172,254,0.35);
                     border-radius:12px; color:#4facfe;
@@ -147,7 +147,18 @@
                     transition:background 0.2s;
                 " onmouseover="this.style.background='rgba(79,172,254,0.22)'"
                    onmouseout="this.style.background='rgba(79,172,254,0.12)'">
-                    🗾 全国駅ボロノイ標高地図を見る →
+                    🗾 全国駅ボロノイ標高・最高気温地図 →
+                </a>
+                <a href="bus_map.html" style="
+                    display:inline-block; padding:12px 28px; width:340px;
+                    background:rgba(167,139,250,0.12);
+                    border:1px solid rgba(167,139,250,0.35);
+                    border-radius:12px; color:#a78bfa;
+                    font-size:0.9rem; text-decoration:none;
+                    transition:background 0.2s;
+                " onmouseover="this.style.background='rgba(167,139,250,0.22)'"
+                   onmouseout="this.style.background='rgba(167,139,250,0.12)'">
+                    🚌 全国バス停標高・最高気温地図 →
                 </a>
             </div>
 

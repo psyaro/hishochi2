@@ -230,6 +230,7 @@ fetch('data/voronoi.geojson')
         const p = feature.properties;
         const minStr = p.min !== null ? `${p.min.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
         const avgStr = p.avg !== null ? `${p.avg.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
+        const tempStr = p.temp !== null ? `${p.temp.toFixed(1)}<span class="p-unit"> ℃</span>` : 'N/A';
         const color  = elevToColor(p.min);
 
         layer.bindPopup(`
@@ -246,6 +247,15 @@ fetch('data/voronoi.geojson')
                 <span class="p-num">${avgStr}</span>
               </div>
             </div>
+            <div class="p-elev" style="margin-top: 8px; border-top: 1px solid #333; padding-top: 8px;">
+              <div class="p-val" style="width: 100%;">
+                <span class="p-label">8月最高気温平年値</span>
+                <span class="p-num" style="color:#ffb199">${tempStr}</span>
+              </div>
+            </div>
+            <div style="margin-top: 8px; border-top: 1px dashed #444; padding-top: 8px; font-size: 0.68rem; color: #888; text-align: center; font-style: italic;">
+              🖱️ ダブルクリックで Google Map を開く
+            </div>
           </div>
         `, { maxWidth: 260 });
 
@@ -254,6 +264,12 @@ fetch('data/voronoi.geojson')
         });
         layer.on('mouseout', e => {
           voronoiLayer.resetStyle(e.target);
+        });
+        layer.on('dblclick', e => {
+          L.DomEvent.stopPropagation(e);
+          const center = layer.getBounds().getCenter();
+          const url = `https://www.google.com/maps/search/?api=1&query=${center.lat},${center.lng}`;
+          window.open(url, '_blank');
         });
       },
     }).addTo(map);

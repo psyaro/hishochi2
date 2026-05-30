@@ -30,9 +30,10 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # hishochi2
 INPUT_GEOJSON_DIR = os.path.join(_ROOT, "downloads/P11-22_SHP")
 INPUT_AVG_NPZ     = os.path.join(_ROOT, "data/japan_elevation_data.npz")
 INPUT_MIN_NPZ     = os.path.join(_ROOT, "data/japan_elevation_data_min.npz")
+INPUT_TEMP_NPZ    = os.path.join(_ROOT, "data/japan_aug_max_temp_data.npz")
 OUT_PARQUET       = os.path.join(_ROOT, "data/bus_elevation.parquet")
 OUT_CSV           = os.path.join(_ROOT, "data/bus_elevation.csv")
-OUT_JSON_GZ       = os.path.join(_ROOT, "data/bus_elevation.json.gz")
+OUT_JSON_GZ       = os.path.join(_ROOT, "docs/data/bus_elevation.json.gz")
 
 
 # ── Step 1: GeoJSON 読み込み＆統合 ──────────────────────────────────────────
@@ -89,22 +90,23 @@ def load_bus_stops(dir_path: str) -> pd.DataFrame:
 # ── Step 2: 標高データのロード ─────────────────────────────────────────────
 
 def load_elevation_grids():
-    print("[Step 2] 標高グリッドをメモリへロード中...")
+    print("[Step 2] 標高および気温グリッドをメモリへロード中...")
     t0 = time.time()
     elev_avg = np.load(INPUT_AVG_NPZ)["elev"]
     elev_min = np.load(INPUT_MIN_NPZ)["elev"]
+    temp_max = np.load(INPUT_TEMP_NPZ)["temp"]
     print(f"         完了 ({time.time()-t0:.1f}s)  shape: {elev_avg.shape}")
-    return elev_avg, elev_min
+    return elev_avg, elev_min, temp_max
 
 
 # ── Step 3: 緯度経度 → 標高のベクトル化ルックアップ ──────────────────────
 
-def lookup_elevations(df: pd.DataFrame, elev_avg: np.ndarray, elev_min: np.ndarray) -> pd.DataFrame:
+def lookup_elevations(df: pd.DataFrame, elev_avg: np.ndarray, elev_min: np.ndarray, temp_max: np.ndarray) -> pd.DataFrame:
     """
     pandas の Series でグリッドインデックスを一括計算し、
     fancy indexing で全バス停の標高を一括取得する。
     """
-    print("[Step 3] 標高ルックアップ中...")
+    print("[Step 3] 標高および気温ルックアップ中...")
     t0 = time.time()
     lats = df["lat"].to_numpy()
     lons = df["lon"].to_numpy()
@@ -131,14 +133,17 @@ def lookup_elevations(df: pd.DataFrame, elev_avg: np.ndarray, elev_min: np.ndarr
     # 一括ルックアップ
     avg_vals = elev_avg[img_row_c, img_col_c]
     min_vals = elev_min[img_row_c, img_col_c]
+    temp_vals = temp_max[img_row_c, img_col_c]
 
     # 範囲外 → NaN
     avg_vals[~in_range] = np.nan
     min_vals[~in_range] = np.nan
+    temp_vals[~in_range] = np.nan
 
     df = df.copy()
     df["elev_avg_m"] = np.where(np.isfinite(avg_vals), avg_vals.round(1), np.nan)
     df["elev_min_m"] = np.where(np.isfinite(min_vals), min_vals.round(1), np.nan)
+    df["temp_max_aug"] = np.where(np.isfinite(temp_vals), temp_vals.round(1), np.nan)
     df["is_ocean"]   = np.isnan(df["elev_avg_m"])
 
     land = (~df["is_ocean"]).sum()
@@ -170,6 +175,7 @@ def save_outputs(df: pd.DataFrame):
     for row in df.itertuples(index=False):
         avg = None if (row.is_ocean or not np.isfinite(row.elev_avg_m)) else row.elev_avg_m
         mn  = None if (row.is_ocean or not np.isfinite(row.elev_min_m)) else row.elev_min_m
+        tmp = None if (row.is_ocean or not np.isfinite(row.temp_max_aug)) else row.temp_max_aug
         payload.append({
             "name":     row.bus_stop_name,
             "operator": row.operator,
@@ -177,6 +183,7 @@ def save_outputs(df: pd.DataFrame):
             "lat":      round(row.lat, 5),
             "avg":      avg,
             "min":      mn,
+            "temp":     tmp,
         })
 
     json_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -198,8 +205,8 @@ def main():
     print("=" * 55)
 
     df                 = load_bus_stops(INPUT_GEOJSON_DIR)
-    elev_avg, elev_min = load_elevation_grids()
-    df                 = lookup_elevations(df, elev_avg, elev_min)
+    elev_avg, elev_min, temp_max = load_elevation_grids()
+    df                 = lookup_elevations(df, elev_avg, elev_min, temp_max)
     save_outputs(df)
 
     print("-" * 55)

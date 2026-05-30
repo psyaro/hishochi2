@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全国バス停標高＆最高気温地図 — 避暑地マップ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+      background: #0d1117;
+      color: #f0f6fc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── ヘッダー ── */
+    header {
+      flex-shrink: 0;
+      background: #161b22;
+      border-bottom: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+    header p {
+      font-size: 0.8rem;
+      color: #8b949e;
+      font-weight: 300;
+    }
+    header .back-btn {
+      font-size: 0.8rem;
+      color: #58a6ff;
+      text-decoration: none;
+      margin-left: auto;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    header .back-btn:hover { color: #8bc1ff; text-decoration: underline; }
+
+    /* ── 地図 ── */
+    #map {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    /* ── ズーム案内インジケータ ── */
+    #zoomIndicator {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px dashed rgba(167, 139, 250, 0.4);
+      border-radius: 12px;
+      padding: 10px 18px;
+      color: #a78bfa;
+      font-size: 0.85rem;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+      transition: opacity 0.3s ease;
+    }
+
+    /* ── Leaflet ツールチップのオーバーライド ── */
+    .leaflet-tooltip {
+      background: #161b22 !important;
+      color: #f0f6fc !important;
+      border: 1px solid rgba(240, 246, 252, 0.15) !important;
+      border-radius: 8px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+      opacity: 0.95 !important;
+      padding: 0 !important;
+    }
+    .leaflet-tooltip-top::before {
+      border-top-color: #161b22 !important;
+    }
+
+    /* ── 凡例 ── */
+    .legend {
+      position: absolute;
+      bottom: 24px;
+      right: 12px;
+      z-index: 900;
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-width: 150px;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .legend h3 {
+      font-size: 0.75rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #c9d1d9;
+      margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    /* ── ローディング ── */
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2000;
+      background: rgba(22, 27, 34, 0.96);
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 20px;
+      padding: 30px 45px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+    }
+    #loading .spinner {
+      width: 45px; height: 45px;
+      border: 3px solid rgba(240, 246, 252, 0.1);
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    #loading p { font-size: 0.95rem; color: #c9d1d9; font-weight: 400; }
+    #loading .progress-text { font-size: 0.78rem; color: #8b949e; margin-top: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── レイヤーコントロールのダーク調カスタム ── */
+    .leaflet-control-layers {
+      background: rgba(22, 27, 34, 0.95) !important;
+      color: #c9d1d9 !important;
+      border: 1px solid rgba(240, 246, 252, 0.1) !important;
+      border-radius: 8px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+      font-family: inherit !important;
+      font-size: 0.8rem !important;
+      padding: 10px 14px !important;
+    }
+    .leaflet-control-layers-list label {
+      margin-bottom: 4px;
+      display: block;
+      cursor: pointer;
+    }
+    /* ── 不透明度コントロールのダーク調カスタム ── */
+    .opacity-control {
+      background: rgba(22, 27, 34, 0.95) !important;
+      border: 1px solid rgba(240, 246, 252, 0.1) !important;
+      border-radius: 12px !important;
+      padding: 10px 14px !important;
+      min-width: 170px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+      backdrop-filter: blur(8px) !important;
+      color: #c9d1d9 !important;
+    }
+    .opacity-control h3 {
+      font-size: 0.7rem !important;
+      color: #8b949e !important;
+      text-transform: uppercase !important;
+      letter-spacing: .5px !important;
+      margin-bottom: 6px !important;
+      font-weight: 600 !important;
+    }
+    #opacitySlider {
+      -webkit-appearance: none !important;
+      width: 100% !important;
+      height: 6px !important;
+      background: rgba(240, 246, 252, 0.15) !important;
+      border-radius: 3px !important;
+      outline: none !important;
+      cursor: pointer !important;
+    }
+    #opacitySlider::-webkit-slider-thumb {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      width: 14px !important;
+      height: 14px !important;
+      border-radius: 50% !important;
+      background: #a78bfa !important;
+      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6) !important;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>全国バス停標高＆最高気温地図</h1>
+  <p>8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット</p>
+  <a class="back-btn" href="index.html">← 標高検索に戻る</a>
+</header>
+
+<div id="map">
+  <!-- 案内オーバーレイ -->
+  <div id="zoomIndicator">
+    <span>🔍 バス停を表示するには、地図をより詳細にズームインしてください (Lv.12以上)</span>
+  </div>
+
+  <!-- ローディング -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>全国 28万件のバス停データを読み込み中…</p>
+    <div class="progress-text" id="progressText">圧縮データ(5.6MB)をダウンロード中...</div>
+  </div>
+</div>
+
+<!-- クライアントサイドでのgzip超高速解凍ライブラリ -->
+<script src="https://unpkg.com/fflate"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── 気温カラーマップ定義 (避暑地：青 〜 酷暑地：赤) ───────────────────────────
+const TEMP_COLORS = [
+  { max: 18.0, color: '#00e5ff', label: '18℃以下 (極寒避暑地 ❄️)' },
+  { max: 20.0, color: '#00b0ff', label: '18〜20℃ (超涼しい)' },
+  { max: 22.0, color: '#1de9b6', label: '20〜22℃ (涼しい)' },
+  { max: 24.0, color: '#00e676', label: '22〜24℃ (快適避暑地)' },
+  { max: 26.0, color: '#c6ff00', label: '24〜26℃ (快適)' },
+  { max: 28.0, color: '#ffd600', label: '26〜28℃ (温暖)' },
+  { max: 30.0, color: '#ffab00', label: '28〜30℃ (暑い)' },
+  { max: 32.0, color: '#ff6d00', label: '30〜32℃ (猛暑)' },
+  { max: 99.0, color: '#dd2c00', label: '32℃以上 (酷暑 🔥)' }
+];
+
+function getTempColor(temp) {
+  if (temp === null || temp === undefined) return '#888888';
+  for (const item of TEMP_COLORS) {
+    if (temp <= item.max) return item.color;
+  }
+  return '#ff0844';
+}
+
+// ── Leaflet 地図の初期化 ────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [36.72, 137.96],  // 白馬・北アルプス周辺 (避暑地と高低差が美しい地域)
+  zoom: 12,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+// ベースマップ定義 (OSM, 地理院地図標準, 淡色, 色別標高図, DarkTheme)
+const baseMaps = {
+  "普通のOSM (標準地図)": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }),
+  "地理院地図 (標準)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
+  }),
+  "地理院地図 (淡色/薄め)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
+  }),
+  "地理院地図 (色別標高図/地形図)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', {
+    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>',
+    maxNativeZoom: 15
+  }),
+  "ダークテーマ (CartoDB)": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  })
+};
+
+// 初期ベースマップとして「地理院地図 (淡色/薄め)」をデフォルトに設定
+baseMaps["地理院地図 (淡色/薄め)"].addTo(map);
+
+// 右上にベースマップ切り替えコントロールを追加
+L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+// ── 背景不透明度調整スライダーコントロールの追加 ──────────────────────────────────
+let currentOpacity = 1.0;
+let currentBaseLayer = baseMaps["地理院地図 (淡色/薄め)"];
+
+const opacityControl = L.control({ position: 'bottomleft' });
+opacityControl.onAdd = function() {
+  const div = L.DomUtil.create('div', 'opacity-control');
+  div.innerHTML = `
+    <h3>背景不透明度</h3>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1.0">
+      <span id="opacityVal" style="font-size:0.75rem; font-weight:700; width:34px; text-align:right;">100%</span>
+    </div>
+  `;
+  
+  // 地図のドラッグ・スクロールイベントがスライダー上で発生しないように抑制
+  L.DomEvent.disableClickPropagation(div);
+  L.DomEvent.disableScrollPropagation(div);
+  
+  return div;
+};
+opacityControl.addTo(map);
+
+// スライダー変更イベント
+document.getElementById('opacitySlider').addEventListener('input', function(e) {
+  const opacity = parseFloat(e.target.value);
+  currentOpacity = opacity;
+  document.getElementById('opacityVal').textContent = `${Math.round(opacity * 100)}%`;
+  if (currentBaseLayer) {
+    currentBaseLayer.setOpacity(opacity);
+  }
+});
+
+// レイヤー変更時に現在の不透明度を維持するイベント
+map.on('baselayerchange', function(e) {
+  currentBaseLayer = e.layer;
+  currentBaseLayer.setOpacity(currentOpacity);
+});
+
+// ── データの読み込みとフェッチ (FFlateによる超高速フロントエンド解凍) ─────────────
+let busStops = [];
+let activeMarkers = L.layerGroup().addTo(map);
+const canvasRenderer = L.canvas({ padding: 0.1 });
+
+const progressText = document.getElementById('progressText');
+
+fetch('data/bus_elevation.json.gz')
+  .then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    progressText.textContent = "データを高速解凍中...";
+    return response.arrayBuffer();
+  })
+  .then(buffer => {
+    // 5.6MBのgzipバイナリをフロントエンドで超高速解凍 (fflate)
+    const decompressed = fflate.decompressSync(new Uint8Array(buffer));
+    progressText.textContent = "JSONデータを構築中...";
+    const jsonText = new TextDecoder().decode(decompressed);
+    busStops = JSON.parse(jsonText);
+    
+    // ロード画面を非表示に
+    document.getElementById('loading').style.display = 'none';
+    
+    // 初期描画の実行
+    updateMarkers();
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById('loading').innerHTML =
+      `<p style="color:#ff0844; font-weight:600;">データの読み込みに失敗しました</p>
+       <p style="font-size:0.8rem; color:#8b949e; margin-top:8px;">${err.message}</p>`;
+  });
+
+// ── インタラクティブ描画・フィルタリングロジック ──
+function updateMarkers() {
+  // データがロードされていない、またはズームレベルが11以下の場合は描画しない
+  const zoom = map.getZoom();
+  const indicator = document.getElementById('zoomIndicator');
+  
+  if (busStops.length === 0) return;
+
+  if (zoom < 12) {
+    activeMarkers.clearLayers();
+    indicator.style.opacity = '1';
+    return;
+  }
+  
+  indicator.style.opacity = '0';
+  
+  // 現在の地図のバウンディングボックス（表示範囲）を取得
+  const bounds = map.getBounds();
+  const pad = 0.02; // 境界部分での急な消失を防ぐためのバッファ
+  const latMin = bounds.getSouth() - pad;
+  const latMax = bounds.getNorth() + pad;
+  const lonMin = bounds.getWest() - pad;
+  const lonMax = bounds.getEast() + pad;
+
+  // 画面内に入っているバス停のみを高速にフィルタリング
+  const visibleStops = busStops.filter(stop => 
+    stop.lat >= latMin && stop.lat <= latMax &&
+    stop.lon >= lonMin && stop.lon <= lonMax
+  );
+
+  activeMarkers.clearLayers();
+
+  // 表示数が多すぎる場合のフリーズセーフティ
+  const maxToRender = 4000;
+  const renderList = visibleStops.slice(0, maxToRender);
+
+  renderList.forEach(stop => {
+    const color = getTempColor(stop.temp);
+    
+    const marker = L.circleMarker([stop.lat, stop.lon], {
+      renderer: canvasRenderer,
+      radius: 5.0,
+      fillColor: color,
+      fillOpacity: 0.85,
+      color: '#000000',
+      weight: 0.5,
+    });
+
+    // ツールチップの内容（ホバー時にカーソルに追従して表示）
+    const avgStr = stop.avg !== null ? `${stop.avg.toFixed(1)} m` : 'N/A';
+    const minStr = stop.min !== null ? `${stop.min.toFixed(1)} m` : 'N/A';
+    const tempStr = stop.temp !== null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
+    
+    const tooltipContent = `
+      <div style="font-family:'Outfit','Noto Sans JP',sans-serif; padding:10px 14px; min-width:180px; line-height:1.4;">
+        <strong style="font-size:0.95rem; color:#c084fc; display:block; margin-bottom:2px;">${stop.name}</strong>
+        <span style="font-size:0.75rem; color:#8b949e; display:block; margin-bottom:8px;">${stop.operator}</span>
+        <div style="display:flex; gap:16px; margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
+          <div>
+            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">平均標高</span>
+            <strong style="font-size:1rem; font-weight:700; color:#f0f6fc;">${avgStr}</strong>
+          </div>
+          <div>
+            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">最低標高</span>
+            <strong style="font-size:1rem; font-weight:700; color:#f0f6fc;">${minStr}</strong>
+          </div>
+        </div>
+        <div style="margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
+          <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">8月最高気温平年値</span>
+          <strong style="font-size:1.1rem; font-weight:800; color:${color};">${tempStr}</strong>
+        </div>
+        <div style="margin-top:6px; border-top:1px dashed rgba(240,246,252,0.15); padding-top:6px; font-size:0.65rem; color:#8b949e; text-align:center; font-style:italic;">
+          🖱️ ダブルクリックで Google Map を開く
+        </div>
+      </div>
+    `;
+
+    marker.bindTooltip(tooltipContent, {
+      sticky: true,
+      direction: 'top',
+      offset: [0, -5],
+    });
+
+    // ホバー時にドットを強調・拡大するエフェクト
+    marker.on('mouseover', function() {
+      this.setStyle({
+        radius: 8.0,
+        fillOpacity: 1.0,
+        weight: 1.2,
+        color: '#ffffff'
+      });
+    });
+    
+    marker.on('mouseout', function() {
+      this.setStyle({
+        radius: 5.0,
+        fillOpacity: 0.85,
+        weight: 0.5,
+        color: '#000000'
+      });
+    });
+
+    // ダブルクリック時にGoogle Mapsを開くエフェクト
+    marker.on('dblclick', function(e) {
+      // 地図自体のダブルクリックズームを抑制
+      L.DomEvent.stopPropagation(e);
+      const url = `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lon}`;
+      window.open(url, '_blank');
+    });
+
+    marker.addTo(activeMarkers);
+  });
+}
+
+// 地図移動やズーム時に動的プロットを再計算
+map.on('moveend', updateMarkers);
+map.on('zoomend', updateMarkers);
+
+// ── 凡例コントロールの追加 ─────────────────────────────────────────────────
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function() {
+  const div = L.DomUtil.create('div', 'legend');
+  div.innerHTML = `<h3>8月最高気温</h3>`;
+  TEMP_COLORS.forEach(item => {
+    div.innerHTML += `
+      <div class="legend-item">
+        <span class="legend-color" style="background:${item.color}"></span>
+        <span>${item.label}</span>
+      </div>`;
+  });
+  return div;
+};
+legend.addTo(map);
+
+// ── 出典表記の追加 ──────────────────────────────────────────────────────────
+map.attributionControl.addAttribution(
+  'バス停: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P11-2022.html" target="_blank">国土数値情報 P11（国土交通省）</a> / 気温: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G02-2022.html" target="_blank">国土数値情報 G02（気象庁）</a>'
+);
+</script>
+</body>
+</html>
