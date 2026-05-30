@@ -295,9 +295,8 @@ fetch('data/voronoi.geojson')
         const color   = elevToColor(p.min);
         const bortle  = getBortleInfo(p.sqm);
         const starComment = p.sqm != null ? `
-          <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(167,139,250,0.15);padding-top:8px;line-height:1.4;text-align:left;">
-            🌟 <strong>${bortle.label}</strong><br>
-            <span style="color:#aaa;">${bortle.desc}</span>
+          <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(167,139,250,0.15);padding-top:8px;text-align:left;">
+            🌟 <strong>${bortle.label}</strong>
           </div>` : '';
 
         layer.bindPopup(`

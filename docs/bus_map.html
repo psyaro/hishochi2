@@ -456,9 +456,8 @@ function updateMarkers() {
     const sqmStr  = stop.sqm  != null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
     const bortle  = getBortleInfo(stop.sqm);
     const starComment = stop.sqm != null ? `
-      <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;line-height:1.4;text-align:left;">
-        🌟 <strong>${bortle.label}</strong><br>
-        <span style="color:#8b949e;">${bortle.desc}</span>
+      <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
+        🌟 <strong>${bortle.label}</strong>
       </div>` : '';
 
     marker.bindTooltip(`
