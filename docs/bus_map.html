@@ -6,14 +6,13 @@
   <title>全国バス停標高＆最高気温地図 — 避暑地マップ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="map-common.css"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Outfit', 'Noto Sans JP', sans-serif;
       background: #0d1117;
       color: #f0f6fc;
-      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -24,15 +23,16 @@
       flex-shrink: 0;
       background: #161b22;
       border-bottom: 1px solid rgba(240, 246, 252, 0.1);
-      padding: 12px 20px;
+      padding: 8px 16px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 10px;
       z-index: 1000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      flex-wrap: wrap;
     }
     header h1 {
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 800;
       background: linear-gradient(90deg, #a78bfa, #f472b6);
       -webkit-background-clip: text;
@@ -40,22 +40,32 @@
       white-space: nowrap;
     }
     header p {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #8b949e;
       font-weight: 300;
+      flex: 1;
+      min-width: 0;
     }
     header .back-btn {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #58a6ff;
       text-decoration: none;
-      margin-left: auto;
       white-space: nowrap;
+      margin-left: auto;
       display: flex;
       align-items: center;
       gap: 4px;
       transition: color 0.2s;
     }
     header .back-btn:hover { color: #8bc1ff; text-decoration: underline; }
+
+    /* スマホ：サブタイトルを非表示、コンパクト化 */
+    @media (max-width: 600px) {
+      header p { display: none; }
+      header { padding: 6px 12px; gap: 8px; }
+      header h1 { font-size: 0.88rem; }
+      .toggle-label { font-size: 0.72rem; }
+    }
 
     /* ── 地図 ── */
     #map {
@@ -64,29 +74,28 @@
       position: relative;
     }
 
-    /* ── ズーム案内インジケータ ── */
+    /* ── ズーム案内 ── */
     #zoomIndicator {
       position: absolute;
-      top: 20px;
+      top: 16px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
       background: rgba(22, 27, 34, 0.95);
       border: 1px dashed rgba(167, 139, 250, 0.4);
       border-radius: 12px;
-      padding: 10px 18px;
+      padding: 8px 16px;
       color: #a78bfa;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       pointer-events: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      text-align: center;
+      max-width: 90%;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       backdrop-filter: blur(8px);
       transition: opacity 0.3s ease;
     }
 
-    /* ── Leaflet ツールチップのオーバーライド ── */
+    /* ── Leaflet ツールチップ ── */
     .leaflet-tooltip {
       background: #161b22 !important;
       color: #f0f6fc !important;
@@ -102,90 +111,39 @@
 
     /* ── 凡例 ── */
     .legend {
-      position: absolute;
-      bottom: 24px;
-      right: 12px;
-      z-index: 900;
       background: rgba(22, 27, 34, 0.95);
       border: 1px solid rgba(240, 246, 252, 0.1);
       border-radius: 14px;
-      padding: 14px 16px;
-      min-width: 150px;
+      padding: 12px 14px;
+      min-width: 148px;
       pointer-events: none;
       backdrop-filter: blur(8px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
     .legend h3 {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #8b949e;
       text-transform: uppercase;
       letter-spacing: .5px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       font-weight: 600;
     }
     .legend-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.75rem;
+      font-size: 0.73rem;
       color: #c9d1d9;
-      margin-bottom: 6px;
-    }
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+      margin-bottom: 5px;
     }
 
-    /* ── ローディング ── */
-    #loading {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 2000;
-      background: rgba(22, 27, 34, 0.96);
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      border-radius: 20px;
-      padding: 30px 45px;
-      text-align: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      backdrop-filter: blur(12px);
-    }
-    #loading .spinner {
-      width: 45px; height: 45px;
-      border: 3px solid rgba(240, 246, 252, 0.1);
-      border-top-color: #a78bfa;
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    #loading p { font-size: 0.95rem; color: #c9d1d9; font-weight: 400; }
-    #loading .progress-text { font-size: 0.78rem; color: #8b949e; margin-top: 6px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    /* ── レイヤーコントロールのダーク調カスタム ── */
-    .leaflet-control-layers {
-      background: rgba(22, 27, 34, 0.95) !important;
-      color: #c9d1d9 !important;
-      border: 1px solid rgba(240, 246, 252, 0.1) !important;
-      border-radius: 8px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
-      font-family: inherit !important;
-      font-size: 0.8rem !important;
-      padding: 10px 14px !important;
-    }
-    .leaflet-control-layers-list label {
-      margin-bottom: 4px;
-      display: block;
-      cursor: pointer;
-    }
-    /* ── 不透明度コントロールのダーク調カスタム ── */
+    /* ── 不透明度コントロール ── */
     .opacity-control {
       background: rgba(22, 27, 34, 0.95) !important;
       border: 1px solid rgba(240, 246, 252, 0.1) !important;
       border-radius: 12px !important;
       padding: 10px 14px !important;
-      min-width: 170px !important;
+      min-width: 160px !important;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
       backdrop-filter: blur(8px) !important;
       color: #c9d1d9 !important;
@@ -209,7 +167,6 @@
     }
     #opacitySlider::-webkit-slider-thumb {
       -webkit-appearance: none !important;
-      appearance: none !important;
       width: 14px !important;
       height: 14px !important;
       border-radius: 50% !important;
@@ -217,230 +174,49 @@
       box-shadow: 0 0 8px rgba(167, 139, 250, 0.6) !important;
     }
 
-    /* ── トグルスイッチスタイル ── */
-    .toggle-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: #ccc;
-      margin-left: auto; /* 右寄せ */
-      margin-right: 20px;
+    /* ── レイヤーコントロール ── */
+    .leaflet-control-layers {
+      background: rgba(22, 27, 34, 0.95) !important;
+      color: #c9d1d9 !important;
+      border: 1px solid rgba(240, 246, 252, 0.1) !important;
+      border-radius: 8px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+      font-family: inherit !important;
+      font-size: 0.8rem !important;
     }
-    .toggle-label {
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 22px;
-      flex-shrink: 0;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
+    .leaflet-control-layers-list label {
+      margin-bottom: 4px;
+      display: block;
       cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #333;
-      transition: .3s;
-      border-radius: 22px;
-      border: 1px solid #444;
     }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: #aaa;
-      transition: .3s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: rgba(167, 139, 250, 0.3);
-      border-color: #a78bfa;
-    }
-    input:checked + .slider:before {
-      transform: translateX(22px);
-      background-color: #a78bfa;
-      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
-    }
-
-    /* ── フローティング星空解説ボタン ── */
-    .sky-info-btn {
-      position: absolute;
-      bottom: 24px;
-      left: 10px;
-      z-index: 900;
-      background: rgba(167, 139, 250, 0.2);
-      border: 1px solid rgba(167, 139, 250, 0.4);
-      color: #a78bfa;
-      border-radius: 12px;
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .sky-info-btn:hover {
-      background: rgba(167, 139, 250, 0.35);
-      border-color: #a78bfa;
-      transform: translateY(-2px);
-    }
-
-    /* ── 星空解説モーダル ── */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(10, 10, 12, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      z-index: 3000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .modal-content {
-      background: rgba(22, 27, 34, 0.9);
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      border-radius: 24px;
-      width: 90%;
-      max-width: 620px;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 30px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-      animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes zoomIn {
-      from { transform: scale(0.95); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(240, 246, 252, 0.1);
-      padding-bottom: 14px;
-      margin-bottom: 20px;
-    }
-    .modal-header h2 {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #a78bfa;
-    }
-    .modal-close {
-      background: transparent;
-      border: none;
-      color: #8b949e;
-      font-size: 1.5rem;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .modal-close:hover { color: #f0f6fc; }
-    .modal-body {
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: #c9d1d9;
-      text-align: left;
-    }
-    .modal-body h3 {
-      font-size: 0.95rem;
-      margin: 18px 0 8px;
-      color: #f0f6fc;
-      border-left: 3px solid #a78bfa;
-      padding-left: 8px;
-    }
-    .modal-body p { margin-bottom: 12px; }
-    .bortle-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-      font-size: 0.78rem;
-    }
-    .bortle-table th, .bortle-table td {
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      padding: 8px 10px;
-      text-align: left;
-    }
-    .bortle-table th {
-      background: rgba(167, 139, 250, 0.1);
-      color: #a78bfa;
-    }
-    .bortle-table tr:nth-child(even) {
-      background: rgba(240, 246, 252, 0.02);
-    }
-    .bortle-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: bold;
-    }
-    .credit-box {
-      background: rgba(240, 246, 252, 0.04);
-      border: 1px dashed rgba(240, 246, 252, 0.15);
-      border-radius: 12px;
-      padding: 15px;
-      margin-top: 20px;
-      font-size: 0.78rem;
-      color: #8b949e;
-    }
-    .credit-box a { color: #58a6ff; text-decoration: none; }
-    .credit-box a:hover { text-decoration: underline; }
+    #loading .progress-text { font-size: 0.78rem; color: #8b949e; margin-top: 6px; }
   </style>
 </head>
 <body>
 
 <header>
   <h1>全国バス停標高＆最高気温地図</h1>
-  <p>8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット</p>
-  <div class="toggle-container" style="margin-left: auto; margin-right: 20px;">
-    <span class="toggle-label" id="modeText" style="color: #ccc; font-size: 0.8rem; font-weight: 600;">8月最高気温 🌡️</span>
+  <p id="headerDesc">8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット</p>
+  <div class="toggle-container">
+    <span class="toggle-label" id="modeText">8月最高気温 🌡️</span>
     <label class="switch">
       <input type="checkbox" id="colorModeToggle">
       <span class="slider"></span>
     </label>
   </div>
-  <a class="back-btn" href="index.html" style="margin-left: 0;">← 標高検索に戻る</a>
+  <a class="back-btn" href="index.html">← 標高検索に戻る</a>
 </header>
 
 <div id="map">
-  <!-- 案内オーバーレイ -->
   <div id="zoomIndicator">
-    <span>🔍 バス停を表示するには、地図をより詳細にズームインしてください (Lv.12以上)</span>
+    🔍 バス停を表示するには、地図をより詳細にズームインしてください (Lv.12以上)
   </div>
-
-  <!-- ローディング -->
   <div id="loading">
     <div class="spinner"></div>
     <p>全国 28万件のバス停データを読み込み中…</p>
     <div class="progress-text" id="progressText">圧縮データ(5.6MB)をダウンロード中...</div>
   </div>
 </div>
-
-<!-- 星空解説フローティングボタン -->
-<button class="sky-info-btn" id="openSkyModal">
-  🌌 星空・光害の解説 & クレジット
-</button>
 
 <!-- 星空解説モーダル -->
 <div class="modal-overlay" id="skyModal">
@@ -451,80 +227,30 @@
     </div>
     <div class="modal-body">
       <p>
-        本システムで表示している「星空の明るさ」は、夜空の暗さを示す物理指標である <strong>SQM (Sky Quality Meter) 値</strong>（単位: mag/arcsec²）および、アマチュア天文学で広く使われる夜空の暗さの指標である <strong>ボートル・スケール (Bortle scale)</strong> に基づいています。
+        本システムで表示している「星空の明るさ」は、夜空の暗さを示す物理指標である <strong>SQM (Sky Quality Meter) 値</strong>（単位: mag/arcsec²）および、アマチュア天文学で広く使われる <strong>ボートル・スケール (Bortle scale)</strong> に基づいています。
       </p>
-      
       <h3>ボートル・スケールと天の川の見えやすさ</h3>
       <p>数値が大きいほど人工光による光害が深刻で、星が見えにくくなります。</p>
-      
       <table class="bortle-table">
         <thead>
-          <tr>
-            <th>クラス</th>
-            <th>夜空の分類 (Label)</th>
-            <th>SQM基準</th>
-            <th>天の川の見えやすさ</th>
-          </tr>
+          <tr><th>クラス</th><th>夜空の分類</th><th>SQM基準</th><th>天の川の見えやすさ</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00e5ff; color:#000;">Class 1</span></td>
-            <td>卓越して暗い空 (Excellent dark sky)</td>
-            <td>21.99–22.00</td>
-            <td>天の川が肉眼で極めて鮮明に見え、三角座銀河(M33)も容易に観察できます。最高峰 of the 夜空です。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00b0ff; color:#000;">Class 2</span></td>
-            <td>平均的な暗い空 (Average dark sky)</td>
-            <td>21.89–21.99</td>
-            <td>天の川が非常に鮮明で、中心部の複雑な構造や「ちり星雲」の微細な明暗が肉眼で確認できます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#1de9b6; color:#000;">Class 3</span></td>
-            <td>田舎の空 (Rural sky)</td>
-            <td>21.69–21.89</td>
-            <td>天の川の構造がよく見えます。地平線付近にわずかに光害を感じる程度で、天頂は十分に暗いです。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00e676; color:#000;">Class 4</span></td>
-            <td>田舎と郊外の境界 (Transition)</td>
-            <td>20.49–21.69</td>
-            <td>天の川は天頂付近で高いコントラストを持ち、複雑な構造が確認できます。地平線近くには光害が見えます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#c6ff00; color:#000;">Class 5</span></td>
-            <td>郊外の空 (Suburban sky)</td>
-            <td>19.50–20.49</td>
-            <td>天の川は天頂付近で非常に弱く、白っぽくかすんで見える程度です。地平線は光害ドームに囲まれます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#ffd600; color:#000;">Class 6</span></td>
-            <td>明るい郊外の空 (Bright suburban)</td>
-            <td>18.94–19.50</td>
-            <td>天の川は天頂付近でのみかろうじて見える程度です。空全体が光害で白く明るいです。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#ffab00; color:#000;">Class 7</span></td>
-            <td>郊外と都市の境界 (Transition)</td>
-            <td>18.38–18.94</td>
-            <td>天の川は天頂であっても完全に見えません。空全体が光害で覆われ、淡い天体は見えません。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#dd2c00; color:#fff;">Class 8-9</span></td>
-            <td>都市・都心の空 (City / Inner city)</td>
-            <td>18.38未満</td>
-            <td>光害が極めて深刻で、天の川は完全に見えません。主要な明るい一等星のみが確認できます。</td>
-          </tr>
+          <tr><td><span class="bortle-badge" style="background:#00e5ff;color:#000;">Class 1</span></td><td>卓越して暗い空</td><td>21.99–22.00</td><td>天の川が肉眼で極めて鮮明に見え、M33も容易に観察できます。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#00b0ff;color:#000;">Class 2</span></td><td>平均的な暗い空</td><td>21.89–21.99</td><td>天の川が非常に鮮明で、中心部の複雑な構造が肉眼で確認できます。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#1de9b6;color:#000;">Class 3</span></td><td>田舎の空</td><td>21.69–21.89</td><td>天の川の構造がよく見えます。地平線付近にわずかに光害を感じる程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#00e676;color:#000;">Class 4</span></td><td>田舎と郊外の境界</td><td>20.49–21.69</td><td>天の川は天頂付近で複雑な構造が確認できます。地平線近くに光害。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#c6ff00;color:#000;">Class 5</span></td><td>郊外の空</td><td>19.50–20.49</td><td>天の川は天頂付近で非常に弱く白っぽく見える程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#ffd600;color:#000;">Class 6</span></td><td>明るい郊外の空</td><td>18.94–19.50</td><td>天の川は天頂付近でのみかろうじて見える程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#ffab00;color:#000;">Class 7</span></td><td>郊外と都市の境界</td><td>18.38–18.94</td><td>天の川は天頂でも完全に見えません。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#dd2c00;color:#fff;">Class 8-9</span></td><td>都市・都心の空</td><td>18.38未満</td><td>光害が極めて深刻で、天の川は完全に見えません。</td></tr>
         </tbody>
       </table>
-      
       <h3>データ出典・クレジット</h3>
       <div class="credit-box">
         <p>使用しているデータは、ATLAS 2015のものです。</p>
-        <p style="margin-top: 6px; font-style: italic; line-height: 1.4;">
-          Falchi, Fabio; Cinzano, Pierantonio; Duriscoe, Dan; Kyba, Christopher CM; Elvidge, Christopher D.; Baugh, Kimberly; 
-          Portnov, Boris; Rybnikova, Nataliya A.; Furgoni, Riccardo (2016): 
-          Supplement to: The New World Atlas of Artificial Night Sky Brightness. V. 1.1. GFZ Data Services. <br>
+        <p style="margin-top:6px;font-style:italic;line-height:1.4;">
+          Falchi et al. (2016): The New World Atlas of Artificial Night Sky Brightness. V. 1.1. GFZ Data Services.<br>
           URL: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">https://doi.org/10.5880/GFZ.1.4.2016.001</a><br>
           Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
         </p>
@@ -533,11 +259,10 @@
   </div>
 </div>
 
-<!-- クライアントサイドでのgzip超高速解凍ライブラリ -->
 <script src="https://unpkg.com/fflate"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ── 気温カラーマップ定義 (避暑地：青 〜 酷暑地：赤) ───────────────────────────
+// ── カラーマップ ─────────────────────────────────────────────────────────────
 const TEMP_COLORS = [
   { max: 18.0, color: '#00e5ff', label: '18℃以下 (極寒避暑地 ❄️)' },
   { max: 20.0, color: '#00b0ff', label: '18〜20℃ (超涼しい)' },
@@ -547,7 +272,7 @@ const TEMP_COLORS = [
   { max: 28.0, color: '#ffd600', label: '26〜28℃ (温暖)' },
   { max: 30.0, color: '#ffab00', label: '28〜30℃ (暑い)' },
   { max: 32.0, color: '#ff6d00', label: '30〜32℃ (猛暑)' },
-  { max: 99.0, color: '#dd2c00', label: '32℃以上 (酷暑 🔥)' }
+  { max: 99.0, color: '#dd2c00', label: '32℃以上 (酷暑 🔥)' },
 ];
 
 const SQM_COLOR_STOPS = [
@@ -563,57 +288,47 @@ const SQM_COLOR_STOPS = [
   { max: 21.3, color: '#2979ff' },
   { max: 21.6, color: '#1a237e' },
   { max: 21.8, color: '#6a1b9a' },
-  { max: 99.0, color: '#311b92' }
+  { max: 99.0, color: '#311b92' },
+];
+
+const SQM_LABELS = [
+  '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
+  '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
+  '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)',
 ];
 
 function getSqmColor(sqm) {
-  if (sqm === null || sqm === undefined) return 'rgba(80,80,80,0.4)';
-  for (const stop of SQM_COLOR_STOPS) {
-    if (sqm <= stop.max) return stop.color;
-  }
+  if (sqm == null) return 'rgba(80,80,80,0.4)';
+  for (const s of SQM_COLOR_STOPS) { if (sqm <= s.max) return s.color; }
   return '#311b92';
 }
 
-
-function getBortleInfo(sqm) {
-  if (sqm === null || sqm === undefined) return { class: 'N/A', label: '不明', desc: 'データなし' };
-  if (sqm >= 21.99) {
-    return { class: 1, label: '卓越して暗い空 (クラス1) 🌌', desc: '天の川が圧倒的な明るさで輝き、M33三角座銀河も肉眼で容易に見えます。最高峰の夜空です。' };
-  } else if (sqm >= 21.89) {
-    return { class: 2, label: '平均的な暗い空 (クラス2) ✨', desc: '天の川が極めて鮮明で、中心部の複雑な構造や微細な明暗が肉眼でくっきり観察できます。' };
-  } else if (sqm >= 21.69) {
-    return { class: 3, label: '田舎の空 (クラス3) 🌠', desc: '天の川の構造が非常によく見えます。地平線付近にのみわずかに街明かりを感じる程度です。' };
-  } else if (sqm >= 20.49) {
-    return { class: 4, label: '田舎と郊外の境界 (クラス4) 🏡', desc: '天の川は天頂付近で複雑な構造が確認できます。地平線近くには光害ドームが見えます。' };
-  } else if (sqm >= 19.50) {
-    return { class: 5, label: '郊外の空 (クラス5) 🌆', desc: '天の川は天頂付近でかなり薄く、白っぽくかすんで見える程度です。全体的に街明かりの影響があります。' };
-  } else if (sqm >= 18.94) {
-    return { class: 6, label: '明るい郊外の空 (クラス6) 🏢', desc: '天の川は天頂付近でのみかろうじて見える程度です。空全体が光害でかなり白く明るいです。' };
-  } else if (sqm >= 18.38) {
-    return { class: 7, label: '郊外と都市の境界 (クラス7) 🌃', desc: '天の川は天頂であっても完全に見えません。空全体が光害で覆われ白っぽいです。' };
-  } else {
-    return { class: '8-9', label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
-  }
-}
-
-
 function getTempColor(temp) {
-  if (temp === null || temp === undefined) return '#888888';
-  for (const item of TEMP_COLORS) {
-    if (temp <= item.max) return item.color;
-  }
+  if (temp == null) return '#888888';
+  for (const item of TEMP_COLORS) { if (temp <= item.max) return item.color; }
   return '#ff0844';
 }
 
-// ── Leaflet 地図の初期化 ────────────────────────────────────────────────────
+function getBortleInfo(sqm) {
+  if (sqm == null) return { label: '不明', desc: 'データなし' };
+  if (sqm >= 21.99) return { label: '卓越して暗い空 (クラス1) 🌌', desc: '天の川が圧倒的な明るさで輝き、M33も肉眼で容易に見えます。' };
+  if (sqm >= 21.89) return { label: '平均的な暗い空 (クラス2) ✨', desc: '天の川が極めて鮮明で、中心部の複雑な構造が肉眼でくっきり観察できます。' };
+  if (sqm >= 21.69) return { label: '田舎の空 (クラス3) 🌠', desc: '天の川の構造が非常によく見えます。地平線付近にのみわずかに街明かりを感じる程度。' };
+  if (sqm >= 20.49) return { label: '田舎と郊外の境界 (クラス4) 🏡', desc: '天の川は天頂付近で複雑な構造が確認できます。地平線近くには光害ドームが見えます。' };
+  if (sqm >= 19.50) return { label: '郊外の空 (クラス5) 🌆', desc: '天の川は天頂付近でかなり薄く白っぽく見える程度。全体的に街明かりの影響があります。' };
+  if (sqm >= 18.94) return { label: '明るい郊外の空 (クラス6) 🏢', desc: '天の川は天頂付近でのみかろうじて見える程度。空全体が光害でかなり明るいです。' };
+  if (sqm >= 18.38) return { label: '郊外と都市の境界 (クラス7) 🌃', desc: '天の川は天頂であっても完全に見えません。空全体が光害で覆われています。' };
+  return { label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
+}
+
+// ── Leaflet 地図 ─────────────────────────────────────────────────────────────
 const map = L.map('map', {
-  center: [36.72, 137.96],  // 白馬・北アルプス周辺 (避暑地と高低差が美しい地域)
+  center: [36.72, 137.96],
   zoom: 12,
   zoomControl: true,
   attributionControl: true,
 });
 
-// ベースマップ定義 (OSM, 地理院地図標準, 淡色, 色別標高図, DarkTheme)
 const baseMaps = {
   "普通のOSM (標準地図)": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -624,24 +339,20 @@ const baseMaps = {
   "地理院地図 (淡色/薄め)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
   }),
-  "地理院地図 (色別標高図/地形図)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', {
+  "地理院地図 (色別標高図)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', {
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>',
     maxNativeZoom: 15
   }),
   "ダークテーマ (CartoDB)": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-  })
+    subdomains: 'abcd', maxZoom: 19
+  }),
 };
 
-// 初期ベースマップとして「地理院地図 (淡色/薄め)」をデフォルトに設定
 baseMaps["地理院地図 (淡色/薄め)"].addTo(map);
-
-// 右上にベースマップ切り替えコントロールを追加
 L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
-// ── 背景不透明度調整スライダーコントロールの追加 ──────────────────────────────────
+// ── 不透明度スライダー（bottomleft） ─────────────────────────────────────────
 let currentOpacity = 1.0;
 let currentBaseLayer = baseMaps["地理院地図 (淡色/薄め)"];
 
@@ -650,205 +361,155 @@ opacityControl.onAdd = function() {
   const div = L.DomUtil.create('div', 'opacity-control');
   div.innerHTML = `
     <h3>背景不透明度</h3>
-    <div style="display:flex; align-items:center; gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;">
       <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1.0">
-      <span id="opacityVal" style="font-size:0.75rem; font-weight:700; width:34px; text-align:right;">100%</span>
-    </div>
-  `;
-  
-  // 地図のドラッグ・スクロールイベントがスライダー上で発生しないように抑制
+      <span id="opacityVal" style="font-size:0.75rem;font-weight:700;width:34px;text-align:right;">100%</span>
+    </div>`;
   L.DomEvent.disableClickPropagation(div);
   L.DomEvent.disableScrollPropagation(div);
-  
   return div;
 };
 opacityControl.addTo(map);
 
-// スライダー変更イベント
+// addTo 後に DOM が存在するのでリスナーを登録
 document.getElementById('opacitySlider').addEventListener('input', function(e) {
-  const opacity = parseFloat(e.target.value);
-  currentOpacity = opacity;
-  document.getElementById('opacityVal').textContent = `${Math.round(opacity * 100)}%`;
-  if (currentBaseLayer) {
-    currentBaseLayer.setOpacity(opacity);
-  }
+  currentOpacity = parseFloat(e.target.value);
+  document.getElementById('opacityVal').textContent = `${Math.round(currentOpacity * 100)}%`;
+  if (currentBaseLayer) currentBaseLayer.setOpacity(currentOpacity);
 });
 
-// レイヤー変更時に現在の不透明度を維持するイベント
 map.on('baselayerchange', function(e) {
   currentBaseLayer = e.layer;
   currentBaseLayer.setOpacity(currentOpacity);
 });
 
-// ── データの読み込みとフェッチ (FFlateによる超高速フロントエンド解凍) ─────────────
+// ── 星空ボタン（bottomleft・スライダーの上に積む） ───────────────────────────
+const skyBtnControl = L.control({ position: 'bottomleft' });
+skyBtnControl.onAdd = function() {
+  const btn = L.DomUtil.create('button', 'sky-info-btn');
+  btn.innerHTML = '🌌 星空・光害の解説 & クレジット';
+  L.DomEvent.disableClickPropagation(btn);
+  L.DomEvent.disableScrollPropagation(btn);
+  btn.addEventListener('click', () => document.getElementById('skyModal').classList.add('active'));
+  return btn;
+};
+skyBtnControl.addTo(map);
+
+// ── データ読み込み ────────────────────────────────────────────────────────────
 let busStops = [];
+let currentDisplayMode = 'temp';
 let activeMarkers = L.layerGroup().addTo(map);
 const canvasRenderer = L.canvas({ padding: 0.1 });
-
-const progressText = document.getElementById('progressText');
 
 fetch('data/bus_elevation.json.gz')
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    progressText.textContent = "データを高速解凍中...";
+    document.getElementById('progressText').textContent = 'データを高速解凍中...';
     return response.arrayBuffer();
   })
   .then(buffer => {
-    // 5.6MBのgzipバイナリをフロントエンドで超高速解凍 (fflate)
     const decompressed = fflate.decompressSync(new Uint8Array(buffer));
-    progressText.textContent = "JSONデータを構築中...";
-    const jsonText = new TextDecoder().decode(decompressed);
-    busStops = JSON.parse(jsonText);
-    
-    // ロード画面を非表示に
+    document.getElementById('progressText').textContent = 'JSONデータを構築中...';
+    busStops = JSON.parse(new TextDecoder().decode(decompressed));
     document.getElementById('loading').style.display = 'none';
-    
-    // 初期描画の実行
     updateMarkers();
   })
   .catch(err => {
     console.error(err);
     document.getElementById('loading').innerHTML =
-      `<p style="color:#ff0844; font-weight:600;">データの読み込みに失敗しました</p>
-       <p style="font-size:0.8rem; color:#8b949e; margin-top:8px;">${err.message}</p>`;
+      `<p style="color:#ff0844;font-weight:600;">データの読み込みに失敗しました</p>
+       <p style="font-size:0.8rem;color:#8b949e;margin-top:8px;">${err.message}</p>`;
   });
 
-// ── インタラクティブ描画・フィルタリングロジック ──
+// ── マーカー描画 ──────────────────────────────────────────────────────────────
 function updateMarkers() {
-  // データがロードされていない、またはズームレベルが11以下の場合は描画しない
   const zoom = map.getZoom();
   const indicator = document.getElementById('zoomIndicator');
-  
   if (busStops.length === 0) return;
-
   if (zoom < 12) {
     activeMarkers.clearLayers();
     indicator.style.opacity = '1';
     return;
   }
-  
   indicator.style.opacity = '0';
-  
-  // 現在の地図のバウンディングボックス（表示範囲）を取得
-  const bounds = map.getBounds();
-  const pad = 0.02; // 境界部分での急な消失を防ぐためのバッファ
-  const latMin = bounds.getSouth() - pad;
-  const latMax = bounds.getNorth() + pad;
-  const lonMin = bounds.getWest() - pad;
-  const lonMax = bounds.getEast() + pad;
 
-  // 画面内に入っているバス停のみを高速にフィルタリング
-  const visibleStops = busStops.filter(stop => 
-    stop.lat >= latMin && stop.lat <= latMax &&
-    stop.lon >= lonMin && stop.lon <= lonMax
+  const bounds = map.getBounds();
+  const pad = 0.02;
+  const visibleStops = busStops.filter(s =>
+    s.lat >= bounds.getSouth() - pad && s.lat <= bounds.getNorth() + pad &&
+    s.lon >= bounds.getWest()  - pad && s.lon <= bounds.getEast()  + pad
   );
 
   activeMarkers.clearLayers();
-
-  // 表示数が多すぎる場合のフリーズセーフティ
-  const maxToRender = 4000;
-  const renderList = visibleStops.slice(0, maxToRender);
-
-  renderList.forEach(stop => {
+  visibleStops.slice(0, 4000).forEach(stop => {
     const color = currentDisplayMode === 'temp' ? getTempColor(stop.temp) : getSqmColor(stop.sqm);
-    
     const marker = L.circleMarker([stop.lat, stop.lon], {
       renderer: canvasRenderer,
       radius: 5.0,
-      fillColor: color,
-      fillOpacity: 0.85,
-      color: '#000000',
-      weight: 0.5,
+      fillColor: color, fillOpacity: 0.85,
+      color: '#000000', weight: 0.5,
     });
 
-    // ツールチップの内容（ホバー時にカーソルに追従して表示）
-    const avgStr = stop.avg !== null ? `${stop.avg.toFixed(1)} m` : 'N/A';
-    const minStr = stop.min !== null ? `${stop.min.toFixed(1)} m` : 'N/A';
-    const tempStr = stop.temp !== null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
-    const sqmStr = stop.sqm !== null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
-    const bortle = getBortleInfo(stop.sqm);
-    const starComment = stop.sqm !== null ? `
-      <div style="margin-top: 8px; font-size: 0.72rem; color: #a78bfa; border-top: 1px solid rgba(240,246,252,0.1); padding-top: 8px; line-height: 1.4; text-align: left;">
+    const avgStr  = stop.avg  != null ? `${stop.avg.toFixed(1)} m`  : 'N/A';
+    const minStr  = stop.min  != null ? `${stop.min.toFixed(1)} m`  : 'N/A';
+    const tempStr = stop.temp != null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
+    const sqmStr  = stop.sqm  != null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
+    const bortle  = getBortleInfo(stop.sqm);
+    const starComment = stop.sqm != null ? `
+      <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;line-height:1.4;text-align:left;">
         🌟 <strong>${bortle.label}</strong><br>
         <span style="color:#8b949e;">${bortle.desc}</span>
-      </div>
-    ` : '';
-    
-    const tooltipContent = `
-      <div style="font-family:'Outfit','Noto Sans JP',sans-serif; padding:10px 14px; min-width:200px; line-height:1.4;">
-        <strong style="font-size:0.95rem; color:#c084fc; display:block; margin-bottom:2px;">${stop.name}</strong>
-        <span style="font-size:0.75rem; color:#8b949e; display:block; margin-bottom:8px;">${stop.operator}</span>
-        <div style="display:flex; gap:16px; margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
+      </div>` : '';
+
+    marker.bindTooltip(`
+      <div style="font-family:'Outfit','Noto Sans JP',sans-serif;padding:10px 14px;min-width:200px;line-height:1.4;">
+        <strong style="font-size:0.95rem;color:#c084fc;display:block;margin-bottom:2px;">${stop.name}</strong>
+        <span style="font-size:0.75rem;color:#8b949e;display:block;margin-bottom:8px;">${stop.operator}</span>
+        <div style="display:flex;gap:16px;margin-top:6px;border-top:1px solid rgba(240,246,252,0.1);padding-top:6px;">
           <div>
-            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">平均標高</span>
-            <strong style="font-size:1rem; font-weight:700; color:#f0f6fc;">${avgStr}</strong>
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">平均標高</span>
+            <strong style="font-size:1rem;font-weight:700;color:#f0f6fc;">${avgStr}</strong>
           </div>
           <div>
-            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">最低標高</span>
-            <strong style="font-size:1rem; font-weight:700; color:#f0f6fc;">${minStr}</strong>
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">最低標高</span>
+            <strong style="font-size:1rem;font-weight:700;color:#f0f6fc;">${minStr}</strong>
           </div>
         </div>
-        <div style="display:flex; gap:16px; margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
+        <div style="display:flex;gap:16px;margin-top:6px;border-top:1px solid rgba(240,246,252,0.1);padding-top:6px;">
           <div style="flex:1;">
-            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">8月最高気温</span>
-            <strong style="font-size:1.1rem; font-weight:800; color:${color};">${tempStr}</strong>
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">8月最高気温</span>
+            <strong style="font-size:1.1rem;font-weight:800;color:${color};">${tempStr}</strong>
           </div>
-          <div style="flex:1; border-left:1px solid rgba(240,246,252,0.1); padding-left:16px;">
-            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">星空の明るさ</span>
-            <strong style="font-size:1.1rem; font-weight:800; color:#a78bfa;">${sqmStr}</strong>
+          <div style="flex:1;border-left:1px solid rgba(240,246,252,0.1);padding-left:16px;">
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">星空の明るさ</span>
+            <strong style="font-size:1.1rem;font-weight:800;color:#a78bfa;">${sqmStr}</strong>
           </div>
         </div>
         ${starComment}
-        <div style="margin-top:8px; border-top:1px dashed rgba(240,246,252,0.15); padding-top:6px; font-size:0.65rem; color:#8b949e; text-align:center; font-style:italic;">
+        <div style="margin-top:8px;border-top:1px dashed rgba(240,246,252,0.15);padding-top:6px;font-size:0.65rem;color:#8b949e;text-align:center;font-style:italic;">
           🖱️ ダブルクリックで Google Map を開く
         </div>
-      </div>
-    `;
+      </div>`, { sticky: true, direction: 'top', offset: [0, -5] });
 
-    marker.bindTooltip(tooltipContent, {
-      sticky: true,
-      direction: 'top',
-      offset: [0, -5],
-    });
-
-    // ホバー時にドットを強調・拡大するエフェクト
     marker.on('mouseover', function() {
-      this.setStyle({
-        radius: 8.0,
-        fillOpacity: 1.0,
-        weight: 1.2,
-        color: '#ffffff'
-      });
+      this.setStyle({ radius: 8.0, fillOpacity: 1.0, weight: 1.2, color: '#ffffff' });
     });
-    
     marker.on('mouseout', function() {
-      this.setStyle({
-        radius: 5.0,
-        fillOpacity: 0.85,
-        weight: 0.5,
-        color: '#000000'
-      });
+      this.setStyle({ radius: 5.0, fillOpacity: 0.85, weight: 0.5, color: '#000000' });
     });
-
-    // ダブルクリック時にGoogle Mapsを開くエフェクト
     marker.on('dblclick', function(e) {
-      // 地図自体のダブルクリックズームを抑制
       L.DomEvent.stopPropagation(e);
-      const url = `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lon}`;
-      window.open(url, '_blank');
+      window.open(`https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lon}`, '_blank');
     });
 
     marker.addTo(activeMarkers);
   });
 }
 
-// 地図移動やズーム時に動的プロットを再計算
 map.on('moveend', updateMarkers);
 map.on('zoomend', updateMarkers);
 
-// ── 凡例コントロールの追加 ─────────────────────────────────────────────────
-let currentDisplayMode = 'temp';
-
+// ── 凡例 ─────────────────────────────────────────────────────────────────────
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function() {
   const div = L.DomUtil.create('div', 'legend');
@@ -858,64 +519,51 @@ legend.onAdd = function() {
 legend.addTo(map);
 
 function updateLegend() {
-  const legendElement = document.querySelector('.legend');
-  if (!legendElement) return;
-
+  const el = document.querySelector('.legend');
+  if (!el) return;
   if (currentDisplayMode === 'temp') {
     let html = `<h3>8月最高気温</h3>`;
     TEMP_COLORS.forEach(item => {
-      html += `
-        <div class="legend-item" style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#c9d1d9; margin-bottom:6px;">
-          <span class="legend-color" style="width:12px; height:12px; border-radius:50%; background:${item.color}"></span>
-          <span>${item.label}</span>
-        </div>`;
+      html += `<div class="legend-item">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
+        <span>${item.label}</span></div>`;
     });
-    legendElement.innerHTML = html;
+    el.innerHTML = html;
   } else {
-    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px; overflow-y:auto; padding-right:4px;">`;
-    const labels = [
-      '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
-      '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
-      '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)'
-    ];
+    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px;overflow-y:auto;padding-right:4px;">`;
     SQM_COLOR_STOPS.forEach((stop, i) => {
-      html += `
-        <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; margin-bottom:3px; color:#aaa;">
-          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${stop.color}; border:0.5px solid #444;"></span>
-          <span>${labels[i]}</span>
-        </div>`;
+      html += `<div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;margin-bottom:3px;color:#aaa;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
+        <span>${SQM_LABELS[i]}</span></div>`;
     });
     html += '</div>';
-    legendElement.innerHTML = html;
+    el.innerHTML = html;
   }
 }
 
-// トグルイベント監視
+// ── トグル ───────────────────────────────────────────────────────────────────
 document.getElementById('colorModeToggle').addEventListener('change', function(e) {
   currentDisplayMode = e.target.checked ? 'sqm' : 'temp';
   document.getElementById('modeText').textContent = e.target.checked ? '星空の明るさ 🌌' : '8月最高気温 🌡️';
-  
-  const pTag = document.querySelector('header p');
-  if (pTag) {
-    pTag.textContent = currentDisplayMode === 'temp' 
-      ? '8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット' 
+  const desc = document.getElementById('headerDesc');
+  if (desc) {
+    desc.textContent = currentDisplayMode === 'temp'
+      ? '8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット'
       : '星空の明るさ（SQM値）に応じたカラープロット（13段階細密段彩）';
   }
-
   updateLegend();
   updateMarkers();
 });
 
-// ── 出典表記の追加 ──────────────────────────────────────────────────────────
+// ── 出典表記 ─────────────────────────────────────────────────────────────────
 map.attributionControl.addAttribution(
   'バス停: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P11-2022.html" target="_blank">国土交通省</a> / ' +
   '気温: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G02-2022.html" target="_blank">気象庁</a> / ' +
   '光害: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">Falchi et al. (ATLAS 2015)</a>'
 );
 
-// ── 星空解説モーダル制御 ──
+// ── モーダル制御 ──────────────────────────────────────────────────────────────
 const skyModal = document.getElementById('skyModal');
-document.getElementById('openSkyModal').addEventListener('click', () => skyModal.classList.add('active'));
 document.getElementById('closeSkyModal').addEventListener('click', () => skyModal.classList.remove('active'));
 skyModal.addEventListener('click', e => { if (e.target === skyModal) skyModal.classList.remove('active'); });
 </script>

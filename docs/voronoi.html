@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全国駅ボロノイ標高地図 — 最低標高</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="map-common.css"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
       background: #111;
       color: #f0f0f0;
-      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     /* ── ヘッダー ── */
@@ -22,14 +22,15 @@
       flex-shrink: 0;
       background: #18181b;
       border-bottom: 1px solid #2a2a2e;
-      padding: 10px 18px;
+      padding: 8px 16px;
       display: flex;
-      align-items: baseline;
-      gap: 14px;
+      align-items: center;
+      gap: 10px;
       z-index: 1000;
+      flex-wrap: wrap;
     }
     header h1 {
-      font-size: 1.05rem;
+      font-size: 1rem;
       font-weight: 700;
       background: linear-gradient(90deg, #60c8ff, #a78bfa);
       -webkit-background-clip: text;
@@ -37,49 +38,37 @@
       white-space: nowrap;
     }
     header p {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #888;
+      flex: 1;
+      min-width: 0;
     }
-    header a {
+    header a.back-link {
       font-size: 0.75rem;
       color: #60c8ff;
       text-decoration: none;
-      margin-left: auto;
       white-space: nowrap;
+      margin-left: auto;
     }
-    header a:hover { text-decoration: underline; }
+    header a.back-link:hover { text-decoration: underline; }
+
+    /* スマホ：サブタイトルを非表示、ヘッダーをコンパクトに */
+    @media (max-width: 600px) {
+      header p { display: none; }
+      header { padding: 6px 12px; gap: 8px; }
+      header h1 { font-size: 0.88rem; }
+      .toggle-label { font-size: 0.72rem; }
+    }
 
     /* ── 地図 ── */
     #map {
       flex: 1;
       min-height: 0;
+      position: relative;
     }
-
-    /* ── ポップアップ ── */
-    .leaflet-popup-content-wrapper {
-      background: #18181b;
-      color: #f0f0f0;
-      border: 1px solid #333;
-      border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      padding: 0;
-    }
-    .leaflet-popup-tip { background: #18181b; }
-    .popup-inner { padding: 12px 16px; min-width: 190px; }
-    .popup-inner .p-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-    .popup-inner .p-line { font-size: 0.78rem; color: #aaa; margin-bottom: 8px; }
-    .popup-inner .p-elev { display: flex; gap: 16px; }
-    .popup-inner .p-val  { display: flex; flex-direction: column; }
-    .popup-inner .p-label{ font-size: 0.68rem; color: #888; text-transform: uppercase; letter-spacing: .5px; }
-    .popup-inner .p-num  { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
-    .popup-inner .p-unit { font-size: 0.75rem; color: #888; }
 
     /* ── 凡例 ── */
     .legend {
-      position: absolute;
-      bottom: 24px;
-      right: 10px;
-      z-index: 900;
       background: rgba(24,24,27,0.92);
       border: 1px solid #333;
       border-radius: 12px;
@@ -107,219 +96,15 @@
       color: #aaa;
     }
 
-    /* ── ローディング ── */
-    #loading {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 999;
-      background: rgba(24,24,27,0.95);
-      border: 1px solid #333;
-      border-radius: 16px;
-      padding: 28px 40px;
-      text-align: center;
-    }
-    #loading .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid #333;
-      border-top-color: #60c8ff;
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 14px;
-    }
-    #loading p { font-size: 0.9rem; color: #ccc; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── トグルスイッチスタイル ── */
-    .toggle-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: #ccc;
-      margin-left: auto; /* 右寄せ */
-      margin-right: 20px;
-    }
-    .toggle-label {
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 22px;
-      flex-shrink: 0;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #333;
-      transition: .3s;
-      border-radius: 22px;
-      border: 1px solid #444;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: #aaa;
-      transition: .3s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: rgba(167, 139, 250, 0.3);
-      border-color: #a78bfa;
-    }
-    input:checked + .slider:before {
-      transform: translateX(22px);
-      background-color: #a78bfa;
-      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
-    }
-
-    /* ── フローティング星空解説ボタン ── */
-    .sky-info-btn {
-      position: absolute;
-      bottom: 24px;
-      left: 10px;
-      z-index: 900;
-      background: rgba(167, 139, 250, 0.2);
-      border: 1px solid rgba(167, 139, 250, 0.4);
-      color: #a78bfa;
-      border-radius: 12px;
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .sky-info-btn:hover {
-      background: rgba(167, 139, 250, 0.35);
-      border-color: #a78bfa;
-      transform: translateY(-2px);
-    }
-
-    /* ── 星空解説モーダル ── */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(10, 10, 12, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      z-index: 3000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .modal-content {
-      background: rgba(22, 27, 34, 0.9);
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      border-radius: 24px;
-      width: 90%;
-      max-width: 620px;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 30px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-      animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes zoomIn {
-      from { transform: scale(0.95); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(240, 246, 252, 0.1);
-      padding-bottom: 14px;
-      margin-bottom: 20px;
-    }
-    .modal-header h2 {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #a78bfa;
-    }
-    .modal-close {
-      background: transparent;
-      border: none;
-      color: #8b949e;
-      font-size: 1.5rem;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .modal-close:hover { color: #f0f6fc; }
-    .modal-body {
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: #c9d1d9;
-      text-align: left;
-    }
-    .modal-body h3 {
-      font-size: 0.95rem;
-      margin: 18px 0 8px;
-      color: #f0f6fc;
-      border-left: 3px solid #a78bfa;
-      padding-left: 8px;
-    }
-    .modal-body p { margin-bottom: 12px; }
-    .bortle-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-      font-size: 0.78rem;
-    }
-    .bortle-table th, .bortle-table td {
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      padding: 8px 10px;
-      text-align: left;
-    }
-    .bortle-table th {
-      background: rgba(167, 139, 250, 0.1);
-      color: #a78bfa;
-    }
-    .bortle-table tr:nth-child(even) {
-      background: rgba(240, 246, 252, 0.02);
-    }
-    .bortle-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: bold;
-    }
-    .credit-box {
-      background: rgba(240, 246, 252, 0.04);
-      border: 1px dashed rgba(240, 246, 252, 0.15);
-      border-radius: 12px;
-      padding: 15px;
-      margin-top: 20px;
-      font-size: 0.78rem;
-      color: #8b949e;
-    }
-    .credit-box a { color: #58a6ff; text-decoration: none; }
-    .credit-box a:hover { text-decoration: underline; }
+    /* ポップアップ内スタイル */
+    .popup-inner { padding: 12px 16px; min-width: 190px; }
+    .popup-inner .p-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .popup-inner .p-line { font-size: 0.78rem; color: #aaa; margin-bottom: 8px; }
+    .popup-inner .p-elev { display: flex; gap: 16px; }
+    .popup-inner .p-val  { display: flex; flex-direction: column; }
+    .popup-inner .p-label{ font-size: 0.68rem; color: #888; text-transform: uppercase; letter-spacing: .5px; }
+    .popup-inner .p-num  { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+    .popup-inner .p-unit { font-size: 0.75rem; color: #888; }
   </style>
 </head>
 <body>
@@ -334,7 +119,7 @@
       <span class="slider"></span>
     </label>
   </div>
-  <a href="index.html">← 標高検索に戻る</a>
+  <a class="back-link" href="index.html">← 標高検索に戻る</a>
 </header>
 
 <div id="map">
@@ -343,11 +128,6 @@
     <p>地図データを読み込み中…</p>
   </div>
 </div>
-
-<!-- 星空解説フローティングボタン -->
-<button class="sky-info-btn" id="openSkyModal">
-  🌌 星空・光害の解説 & クレジット
-</button>
 
 <!-- 星空解説モーダル -->
 <div class="modal-overlay" id="skyModal">
@@ -358,80 +138,30 @@
     </div>
     <div class="modal-body">
       <p>
-        本システムで表示している「星空の明るさ」は、夜空の暗さを示す物理指標である <strong>SQM (Sky Quality Meter) 値</strong>（単位: mag/arcsec²）および、アマチュア天文学で広く使われる夜空の暗さの指標である <strong>ボートル・スケール (Bortle scale)</strong> に基づいています。
+        本システムで表示している「星空の明るさ」は、夜空の暗さを示す物理指標である <strong>SQM (Sky Quality Meter) 値</strong>（単位: mag/arcsec²）および、アマチュア天文学で広く使われる <strong>ボートル・スケール (Bortle scale)</strong> に基づいています。
       </p>
-      
       <h3>ボートル・スケールと天の川の見えやすさ</h3>
       <p>数値が大きいほど人工光による光害が深刻で、星が見えにくくなります。</p>
-      
       <table class="bortle-table">
         <thead>
-          <tr>
-            <th>クラス</th>
-            <th>夜空の分類 (Label)</th>
-            <th>SQM基準</th>
-            <th>天の川の見えやすさ</th>
-          </tr>
+          <tr><th>クラス</th><th>夜空の分類</th><th>SQM基準</th><th>天の川の見えやすさ</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00e5ff; color:#000;">Class 1</span></td>
-            <td>卓越して暗い空 (Excellent dark sky)</td>
-            <td>21.99–22.00</td>
-            <td>天の川が肉眼で極めて鮮明に見え、三角座銀河(M33)も容易に観察できます。最高峰の夜空です。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00b0ff; color:#000;">Class 2</span></td>
-            <td>平均的な暗い空 (Average dark sky)</td>
-            <td>21.89–21.99</td>
-            <td>天の川が非常に鮮明で、中心部の複雑な構造や「ちり星雲」の微細な明暗が肉眼で確認できます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#1de9b6; color:#000;">Class 3</span></td>
-            <td>田舎の空 (Rural sky)</td>
-            <td>21.69–21.89</td>
-            <td>天の川の構造がよく見えます。地平線付近にわずかに光害を感じる程度で、天頂は十分に暗いです。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#00e676; color:#000;">Class 4</span></td>
-            <td>田舎と郊外の境界 (Transition)</td>
-            <td>20.49–21.69</td>
-            <td>天の川は天頂付近で高いコントラストを持ち、複雑な構造が確認できます。地平線近くには光害が見えます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#c6ff00; color:#000;">Class 5</span></td>
-            <td>郊外の空 (Suburban sky)</td>
-            <td>19.50–20.49</td>
-            <td>天の川は天頂付近で非常に弱く、白っぽくかすんで見える程度です。地平線は光害ドームに囲まれます。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#ffd600; color:#000;">Class 6</span></td>
-            <td>明るい郊外の空 (Bright suburban)</td>
-            <td>18.94–19.50</td>
-            <td>天の川は天頂付近でのみかろうじて見える程度です。空全体が光害で白く明るいです。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#ffab00; color:#000;">Class 7</span></td>
-            <td>郊外と都市の境界 (Transition)</td>
-            <td>18.38–18.94</td>
-            <td>天の川は天頂であっても完全に見えません。空全体が光害で覆われ、淡い天体は見えません。</td>
-          </tr>
-          <tr>
-            <td><span class="bortle-badge" style="background:#dd2c00; color:#fff;">Class 8-9</span></td>
-            <td>都市・都心の空 (City / Inner city)</td>
-            <td>18.38未満</td>
-            <td>光害が極めて深刻で、天の川は完全に見えません。主要な明るい一等星のみが確認できます。</td>
-          </tr>
+          <tr><td><span class="bortle-badge" style="background:#00e5ff;color:#000;">Class 1</span></td><td>卓越して暗い空</td><td>21.99–22.00</td><td>天の川が肉眼で極めて鮮明に見え、M33も容易に観察できます。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#00b0ff;color:#000;">Class 2</span></td><td>平均的な暗い空</td><td>21.89–21.99</td><td>天の川が非常に鮮明で、中心部の複雑な構造が肉眼で確認できます。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#1de9b6;color:#000;">Class 3</span></td><td>田舎の空</td><td>21.69–21.89</td><td>天の川の構造がよく見えます。地平線付近にわずかに光害を感じる程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#00e676;color:#000;">Class 4</span></td><td>田舎と郊外の境界</td><td>20.49–21.69</td><td>天の川は天頂付近で複雑な構造が確認できます。地平線近くに光害。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#c6ff00;color:#000;">Class 5</span></td><td>郊外の空</td><td>19.50–20.49</td><td>天の川は天頂付近で非常に弱く白っぽく見える程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#ffd600;color:#000;">Class 6</span></td><td>明るい郊外の空</td><td>18.94–19.50</td><td>天の川は天頂付近でのみかろうじて見える程度。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#ffab00;color:#000;">Class 7</span></td><td>郊外と都市の境界</td><td>18.38–18.94</td><td>天の川は天頂でも完全に見えません。</td></tr>
+          <tr><td><span class="bortle-badge" style="background:#dd2c00;color:#fff;">Class 8-9</span></td><td>都市・都心の空</td><td>18.38未満</td><td>光害が極めて深刻で、天の川は完全に見えません。</td></tr>
         </tbody>
       </table>
-      
       <h3>データ出典・クレジット</h3>
       <div class="credit-box">
         <p>使用しているデータは、ATLAS 2015のものです。</p>
-        <p style="margin-top: 6px; font-style: italic; line-height: 1.4;">
-          Falchi, Fabio; Cinzano, Pierantonio; Duriscoe, Dan; Kyba, Christopher CM; Elvidge, Christopher D.; Baugh, Kimberly; 
-          Portnov, Boris; Rybnikova, Nataliya A.; Furgoni, Riccardo (2016): 
-          Supplement to: The New World Atlas of Artificial Night Sky Brightness. V. 1.1. GFZ Data Services. <br>
+        <p style="margin-top:6px;font-style:italic;line-height:1.4;">
+          Falchi et al. (2016): The New World Atlas of Artificial Night Sky Brightness. V. 1.1. GFZ Data Services.<br>
           URL: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">https://doi.org/10.5880/GFZ.1.4.2016.001</a><br>
           Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
         </p>
@@ -442,6 +172,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// ── SQM カラーストップ ──────────────────────────────────────────────────────
 const SQM_COLOR_STOPS = [
   { max: 17.0, color: '#ffffff' },
   { max: 17.5, color: '#ffe4e1' },
@@ -455,52 +186,38 @@ const SQM_COLOR_STOPS = [
   { max: 21.3, color: '#2979ff' },
   { max: 21.6, color: '#1a237e' },
   { max: 21.8, color: '#6a1b9a' },
-  { max: 99.0, color: '#311b92' }
+  { max: 99.0, color: '#311b92' },
 ];
 
 function getSqmColor(sqm) {
-  if (sqm === null || sqm === undefined) return 'rgba(80,80,80,0.4)';
-  for (const stop of SQM_COLOR_STOPS) {
-    if (sqm <= stop.max) return stop.color;
-  }
+  if (sqm == null) return 'rgba(80,80,80,0.4)';
+  for (const s of SQM_COLOR_STOPS) { if (sqm <= s.max) return s.color; }
   return '#311b92';
 }
 
-
 function getBortleInfo(sqm) {
-  if (sqm === null || sqm === undefined) return { class: 'N/A', label: '不明', desc: 'データなし' };
-  if (sqm >= 21.99) {
-    return { class: 1, label: '卓越して暗い空 (クラス1) 🌌', desc: '天の川が圧倒的な明るさで輝き、M33三角座銀河も肉眼で容易に見えます。最高峰の夜空です。' };
-  } else if (sqm >= 21.89) {
-    return { class: 2, label: '平均的な暗い空 (クラス2) ✨', desc: '天の川が極めて鮮明で、中心部の複雑な構造や微細な明暗が肉眼でくっきり観察できます。' };
-  } else if (sqm >= 21.69) {
-    return { class: 3, label: '田舎の空 (クラス3) 🌠', desc: '天の川の構造が非常によく見えます。地平線付近にのみわずかに街明かりを感じる程度です。' };
-  } else if (sqm >= 20.49) {
-    return { class: 4, label: '田舎と郊外の境界 (クラス4) 🏡', desc: '天の川は天頂付近で複雑な構造が確認できます。地平線近くには光害ドームが見えます。' };
-  } else if (sqm >= 19.50) {
-    return { class: 5, label: '郊外の空 (クラス5) 🌆', desc: '天の川は天頂付近でかなり薄く、白っぽくかすんで見える程度です。全体的に街明かりの影響があります。' };
-  } else if (sqm >= 18.94) {
-    return { class: 6, label: '明るい郊外の空 (クラス6) 🏢', desc: '天の川は天頂付近でのみかろうじて見える程度です。空全体が光害でかなり白く明るいです。' };
-  } else if (sqm >= 18.38) {
-    return { class: 7, label: '郊外と都市の境界 (クラス7) 🌃', desc: '天の川は天頂であっても完全に見えません。空全体が光害で覆われ白っぽいです。' };
-  } else {
-    return { class: '8-9', label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
-  }
+  if (sqm == null) return { label: '不明', desc: 'データなし' };
+  if (sqm >= 21.99) return { label: '卓越して暗い空 (クラス1) 🌌', desc: '天の川が圧倒的な明るさで輝き、M33も肉眼で容易に見えます。' };
+  if (sqm >= 21.89) return { label: '平均的な暗い空 (クラス2) ✨', desc: '天の川が極めて鮮明で、中心部の複雑な構造が肉眼でくっきり観察できます。' };
+  if (sqm >= 21.69) return { label: '田舎の空 (クラス3) 🌠', desc: '天の川の構造が非常によく見えます。地平線付近にのみわずかに街明かりを感じる程度。' };
+  if (sqm >= 20.49) return { label: '田舎と郊外の境界 (クラス4) 🏡', desc: '天の川は天頂付近で複雑な構造が確認できます。地平線近くには光害ドームが見えます。' };
+  if (sqm >= 19.50) return { label: '郊外の空 (クラス5) 🌆', desc: '天の川は天頂付近でかなり薄く白っぽく見える程度。全体的に街明かりの影響があります。' };
+  if (sqm >= 18.94) return { label: '明るい郊外の空 (クラス6) 🏢', desc: '天の川は天頂付近でのみかろうじて見える程度。空全体が光害でかなり明るいです。' };
+  if (sqm >= 18.38) return { label: '郊外と都市の境界 (クラス7) 🌃', desc: '天の川は天頂であっても完全に見えません。空全体が光害で覆われています。' };
+  return { label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
 }
 
-
-// ── 標高 → カラー変換 ─────────────────────────────────────────────────────
-// 制御点: [標高m, [R, G, B]]
+// ── 標高カラー ──────────────────────────────────────────────────────────────
 const COLOR_STOPS = [
-  [-10,  [ 20,  40, 120]],  // 海面以下: 紺青
-  [  0,  [ 20,  80, 160]],  // 0m: 青
-  [  5,  [ 30, 130,  80]],  // 5m: 濃緑
-  [ 30,  [ 80, 170,  70]],  // 30m: 緑
-  [100,  [180, 220,  80]],  // 100m: 黄緑
-  [300,  [230, 200,  60]],  // 300m: 黄
-  [600,  [200, 130,  40]],  // 600m: 橙褐
-  [1000, [160,  80,  30]],  // 1000m: 赤褐
-  [1640, [220, 200, 190]],  // 1640m: 薄灰白 (最高: 黒部平)
+  [-10,  [ 20,  40, 120]],
+  [  0,  [ 20,  80, 160]],
+  [  5,  [ 30, 130,  80]],
+  [ 30,  [ 80, 170,  70]],
+  [100,  [180, 220,  80]],
+  [300,  [230, 200,  60]],
+  [600,  [200, 130,  40]],
+  [1000, [160,  80,  30]],
+  [1640, [220, 200, 190]],
 ];
 
 function lerpColor(a, b, t) {
@@ -512,74 +229,76 @@ function lerpColor(a, b, t) {
 }
 
 function elevToColor(elev) {
-  if (elev === null || elev === undefined) return 'rgba(80,80,80,0.4)';
-  const stops = COLOR_STOPS;
-  if (elev <= stops[0][0]) return `rgb(${stops[0][1].join(',')})`;
-  if (elev >= stops[stops.length-1][0]) {
-    const c = stops[stops.length-1][1];
-    return `rgb(${c.join(',')})`;
-  }
-  for (let i = 0; i < stops.length - 1; i++) {
-    const [e0, c0] = stops[i];
-    const [e1, c1] = stops[i+1];
+  if (elev == null) return 'rgba(80,80,80,0.4)';
+  const s = COLOR_STOPS;
+  if (elev <= s[0][0]) return `rgb(${s[0][1].join(',')})`;
+  if (elev >= s[s.length-1][0]) return `rgb(${s[s.length-1][1].join(',')})`;
+  for (let i = 0; i < s.length - 1; i++) {
+    const [e0, c0] = s[i], [e1, c1] = s[i+1];
     if (elev >= e0 && elev <= e1) {
-      const t = (elev - e0) / (e1 - e0);
-      const c = lerpColor(c0, c1, t);
-      return `rgb(${c.join(',')})`;
+      return `rgb(${lerpColor(c0, c1, (elev - e0) / (e1 - e0)).join(',')})`;
     }
   }
 }
 
-// ── Leaflet 地図の初期化 ────────────────────────────────────────────────────
+// ── 現在の表示モード ─────────────────────────────────────────────────────────
+let currentDisplayMode = 'elev';
+
+function getFeatureStyle(feature) {
+  if (currentDisplayMode === 'elev') {
+    return {
+      fillColor:   elevToColor(feature.properties.min),
+      fillOpacity: 0.65,
+      color:       'rgba(0,0,0,0.08)',
+      weight:      0.4,
+    };
+  } else {
+    return {
+      fillColor:   getSqmColor(feature.properties.sqm),
+      fillOpacity: 0.75,
+      color:       'rgba(0,0,0,0.08)',
+      weight:      0.4,
+    };
+  }
+}
+
+// ── Leaflet 地図 ─────────────────────────────────────────────────────────────
 const map = L.map('map', {
-  center: [36.35, 138.60],  // 軽井沢付近
-  zoom: 12,                  // 約30km四方
+  center: [36.35, 138.60],
+  zoom: 12,
   zoomControl: true,
   attributionControl: true,
 });
 
-// ベースマップ: CartoDB Positron (明るいグレー系でポリゴンが映える)
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
   subdomains: 'abcd',
   maxZoom: 19,
 }).addTo(map);
 
-// ── GeoJSON 読み込みと描画 ───────────────────────────────────────────────────
+// ── GeoJSON 読み込み ─────────────────────────────────────────────────────────
 let voronoiLayer = null;
 
 fetch('data/voronoi.geojson')
-  .then(r => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  })
+  .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
   .then(data => {
     document.getElementById('loading').style.display = 'none';
 
     voronoiLayer = L.geoJSON(data, {
-      style: feature => {
-        const elev = feature.properties.min;
-        return {
-          fillColor:   elevToColor(elev),
-          fillOpacity: 0.65,
-          color:       'rgba(0,0,0,0.08)',
-          weight:      0.4,
-        };
-      },
+      style: feature => getFeatureStyle(feature),
       onEachFeature: (feature, layer) => {
         const p = feature.properties;
-        const minStr = p.min !== null ? `${p.min.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
-        const avgStr = p.avg !== null ? `${p.avg.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
-        const tempStr = p.temp !== null ? `${p.temp.toFixed(1)}<span class="p-unit"> ℃</span>` : 'N/A';
-        const sqmStr = p.sqm !== null ? `${p.sqm.toFixed(2)}<span class="p-unit"> mag</span>` : 'N/A';
-        const color  = elevToColor(p.min);
-        const bortle = getBortleInfo(p.sqm);
-        const starComment = p.sqm !== null ? `
-          <div style="margin-top: 8px; font-size: 0.72rem; color: #a78bfa; border-top: 1px solid rgba(167,139,250,0.15); padding-top: 8px; line-height: 1.4; text-align: left;">
+        const minStr  = p.min  != null ? `${p.min.toFixed(1)}<span class="p-unit"> m</span>`   : 'N/A';
+        const avgStr  = p.avg  != null ? `${p.avg.toFixed(1)}<span class="p-unit"> m</span>`   : 'N/A';
+        const tempStr = p.temp != null ? `${p.temp.toFixed(1)}<span class="p-unit"> ℃</span>` : 'N/A';
+        const sqmStr  = p.sqm  != null ? `${p.sqm.toFixed(2)}<span class="p-unit"> mag</span>` : 'N/A';
+        const color   = elevToColor(p.min);
+        const bortle  = getBortleInfo(p.sqm);
+        const starComment = p.sqm != null ? `
+          <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(167,139,250,0.15);padding-top:8px;line-height:1.4;text-align:left;">
             🌟 <strong>${bortle.label}</strong><br>
             <span style="color:#aaa;">${bortle.desc}</span>
-          </div>
-        ` : '';
+          </div>` : '';
 
         layer.bindPopup(`
           <div class="popup-inner">
@@ -595,127 +314,117 @@ fetch('data/voronoi.geojson')
                 <span class="p-num">${avgStr}</span>
               </div>
             </div>
-            <div class="p-elev" style="margin-top: 8px; border-top: 1px solid #333; padding-top: 8px;">
-              <div class="p-val" style="width: 50%;">
+            <div class="p-elev" style="margin-top:8px;border-top:1px solid #333;padding-top:8px;">
+              <div class="p-val" style="width:50%;">
                 <span class="p-label">8月最高気温</span>
                 <span class="p-num" style="color:#ffb199">${tempStr}</span>
               </div>
-              <div class="p-val" style="width: 50%; padding-left: 8px; border-left: 1px solid #333;">
+              <div class="p-val" style="width:50%;padding-left:8px;border-left:1px solid #333;">
                 <span class="p-label">星空の明るさ</span>
                 <span class="p-num" style="color:#a78bfa">${sqmStr}</span>
               </div>
             </div>
             ${starComment}
-            <div style="margin-top: 8px; border-top: 1px dashed #444; padding-top: 8px; font-size: 0.68rem; color: #888; text-align: center; font-style: italic;">
+            <div style="margin-top:8px;border-top:1px dashed #444;padding-top:8px;font-size:0.68rem;color:#888;text-align:center;font-style:italic;">
               🖱️ ダブルクリックで Google Map を開く
             </div>
           </div>
         `, { maxWidth: 260 });
 
         layer.on('mouseover', e => {
-          e.target.setStyle({ fillOpacity: 0.88, weight: 1.2, color: '#fff' });
+          e.target.setStyle({ fillOpacity: 0.9, weight: 1.2, color: '#fff' });
         });
+        // resetStyle を使わず現在のモードで再描画してトグル後も正しく戻る
         layer.on('mouseout', e => {
-          voronoiLayer.resetStyle(e.target);
+          e.target.setStyle(getFeatureStyle(feature));
         });
         layer.on('dblclick', e => {
           L.DomEvent.stopPropagation(e);
-          const center = layer.getBounds().getCenter();
-          const url = `https://www.google.com/maps/search/?api=1&query=${center.lat},${center.lng}`;
-          window.open(url, '_blank');
+          const c = layer.getBounds().getCenter();
+          window.open(`https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`, '_blank');
         });
       },
     }).addTo(map);
 
-    // ── 駅位置を小さい黒点で描画（Canvas レンダラーで高速化）──────────
+    // 駅位置ドット
     const canvasRenderer = L.canvas({ padding: 0.5 });
     const stationDots = L.layerGroup();
     voronoiLayer.eachLayer(layer => {
       const center = layer.getBounds().getCenter();
       L.circleMarker(center, {
-        renderer:    canvasRenderer,
-        radius:      2.5,
-        color:       '#000',
-        weight:      0,
-        fillColor:   '#333',
-        fillOpacity: 0.4,
+        renderer: canvasRenderer,
+        radius: 2.5,
+        color: '#000', weight: 0,
+        fillColor: '#333', fillOpacity: 0.4,
         interactive: false,
       }).addTo(stationDots);
     });
     stationDots.addTo(map);
-
-    // ズームに応じてドットサイズを動的に変更
-    map.on('zoomend', () => {
-      const z = map.getZoom();
-      const r = 2;
-      stationDots.eachLayer(l => l.setRadius(r));
-    });
   })
   .catch(err => {
     document.getElementById('loading').innerHTML =
       `<p style="color:#f87171">読み込みエラー: ${err.message}</p>`;
   });
 
-// ── 凡例 ────────────────────────────────────────────────────────────────────
-let currentDisplayMode = 'elev';
-
+// ── 凡例 ─────────────────────────────────────────────────────────────────────
 const legendDiv = L.control({ position: 'bottomright' });
 legendDiv.onAdd = () => {
   const div = L.DomUtil.create('div', 'legend');
-  // カレントディレクトリ移動イベントの動作が完了してから中身を詰める
   setTimeout(() => updateLegend(), 50);
   return div;
 };
 legendDiv.addTo(map);
 
-function updateLegend() {
-  const legendElement = document.querySelector('.legend');
-  if (!legendElement) return;
+const SQM_LABELS = [
+  '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
+  '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
+  '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)',
+];
 
+function updateLegend() {
+  const el = document.querySelector('.legend');
+  if (!el) return;
   if (currentDisplayMode === 'elev') {
     const gradStops = COLOR_STOPS.map(([, c]) => `rgb(${c.join(',')})`).join(',');
-    legendElement.innerHTML = `
+    el.innerHTML = `
       <h3>最低標高</h3>
-      <div class="legend-bar"
-           style="background: linear-gradient(to right, ${gradStops})"></div>
+      <div class="legend-bar" style="background:linear-gradient(to right,${gradStops})"></div>
       <div class="legend-labels">
         <span>${COLOR_STOPS[0][0]}m</span>
         <span>${COLOR_STOPS[Math.floor(COLOR_STOPS.length/2)][0]}m</span>
         <span>${COLOR_STOPS[COLOR_STOPS.length-1][0]}m</span>
-      </div>
-    `;
+      </div>`;
   } else {
-    // 星空の明るさは段彩リストとして細密（13段階）に縦並び表示
-    let listHtml = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px; overflow-y:auto; padding-right:4px;">`;
-    const labels = [
-      '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
-      '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
-      '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)'
-    ];
+    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px;overflow-y:auto;padding-right:4px;">`;
     SQM_COLOR_STOPS.forEach((stop, i) => {
-      listHtml += `
-        <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; margin-bottom:3px; color:#aaa;">
-          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${stop.color}; border:0.5px solid #444;"></span>
-          <span>${labels[i]}</span>
-        </div>`;
+      html += `<div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;margin-bottom:3px;color:#aaa;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${stop.color};border:0.5px solid #444;"></span>
+        <span>${SQM_LABELS[i]}</span></div>`;
     });
-    listHtml += '</div>';
-    legendElement.innerHTML = listHtml;
+    html += '</div>';
+    el.innerHTML = html;
   }
 }
 
-// トグルイベント監視
+// ── 星空ボタン（Leaflet コントロール） ───────────────────────────────────────
+const skyBtnControl = L.control({ position: 'bottomleft' });
+skyBtnControl.onAdd = function() {
+  const btn = L.DomUtil.create('button', 'sky-info-btn');
+  btn.innerHTML = '🌌 星空・光害の解説 & クレジット';
+  L.DomEvent.disableClickPropagation(btn);
+  L.DomEvent.disableScrollPropagation(btn);
+  btn.addEventListener('click', () => document.getElementById('skyModal').classList.add('active'));
+  return btn;
+};
+skyBtnControl.addTo(map);
+
+// ── トグル ───────────────────────────────────────────────────────────────────
 document.getElementById('colorModeToggle').addEventListener('change', function(e) {
   currentDisplayMode = e.target.checked ? 'sqm' : 'elev';
-  document.getElementById('modeText').innerHTML = e.target.checked ? '星空の明るさ 🌌' : '最低標高 ⛰️';
-  
+  document.getElementById('modeText').textContent = e.target.checked ? '星空の明るさ 🌌' : '最低標高 ⛰️';
   if (voronoiLayer) {
-    voronoiLayer.setStyle(feature => {
-      const val = currentDisplayMode === 'elev' ? feature.properties.min : feature.properties.sqm;
-      return {
-        fillColor: currentDisplayMode === 'elev' ? elevToColor(val) : getSqmColor(val),
-        fillOpacity: currentDisplayMode === 'elev' ? 0.65 : 0.75,
-      };
+    voronoiLayer.eachLayer(layer => {
+      layer.setStyle(getFeatureStyle(layer.feature));
     });
   }
   updateLegend();
@@ -727,9 +436,8 @@ map.attributionControl.addAttribution(
   '光害: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">Falchi et al. (ATLAS 2015)</a>'
 );
 
-// ── 星空解説モーダル制御 ──
+// ── モーダル制御 ──────────────────────────────────────────────────────────────
 const skyModal = document.getElementById('skyModal');
-document.getElementById('openSkyModal').addEventListener('click', () => skyModal.classList.add('active'));
 document.getElementById('closeSkyModal').addEventListener('click', () => skyModal.classList.remove('active'));
 skyModal.addEventListener('click', e => { if (e.target === skyModal) skyModal.classList.remove('active'); });
 </script>
