@@ -425,9 +425,10 @@ function updateMarkers() {
     const avgStr = stop.avg !== null ? `${stop.avg.toFixed(1)} m` : 'N/A';
     const minStr = stop.min !== null ? `${stop.min.toFixed(1)} m` : 'N/A';
     const tempStr = stop.temp !== null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
+    const sqmStr = stop.sqm !== null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
     
     const tooltipContent = `
-      <div style="font-family:'Outfit','Noto Sans JP',sans-serif; padding:10px 14px; min-width:180px; line-height:1.4;">
+      <div style="font-family:'Outfit','Noto Sans JP',sans-serif; padding:10px 14px; min-width:200px; line-height:1.4;">
         <strong style="font-size:0.95rem; color:#c084fc; display:block; margin-bottom:2px;">${stop.name}</strong>
         <span style="font-size:0.75rem; color:#8b949e; display:block; margin-bottom:8px;">${stop.operator}</span>
         <div style="display:flex; gap:16px; margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
@@ -440,11 +441,17 @@ function updateMarkers() {
             <strong style="font-size:1rem; font-weight:700; color:#f0f6fc;">${minStr}</strong>
           </div>
         </div>
-        <div style="margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
-          <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">8月最高気温平年値</span>
-          <strong style="font-size:1.1rem; font-weight:800; color:${color};">${tempStr}</strong>
+        <div style="display:flex; gap:16px; margin-top:6px; border-top:1px solid rgba(240,246,252,0.1); padding-top:6px;">
+          <div style="flex:1;">
+            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">8月最高気温</span>
+            <strong style="font-size:1.1rem; font-weight:800; color:${color};">${tempStr}</strong>
+          </div>
+          <div style="flex:1; border-left:1px solid rgba(240,246,252,0.1); padding-left:16px;">
+            <span style="font-size:0.65rem; color:#8b949e; display:block; text-transform:uppercase; letter-spacing:0.5px;">星空の明るさ</span>
+            <strong style="font-size:1.1rem; font-weight:800; color:#a78bfa;">${sqmStr}</strong>
+          </div>
         </div>
-        <div style="margin-top:6px; border-top:1px dashed rgba(240,246,252,0.15); padding-top:6px; font-size:0.65rem; color:#8b949e; text-align:center; font-style:italic;">
+        <div style="margin-top:8px; border-top:1px dashed rgba(240,246,252,0.15); padding-top:6px; font-size:0.65rem; color:#8b949e; text-align:center; font-style:italic;">
           🖱️ ダブルクリックで Google Map を開く
         </div>
       </div>

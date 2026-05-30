@@ -231,6 +231,7 @@ fetch('data/voronoi.geojson')
         const minStr = p.min !== null ? `${p.min.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
         const avgStr = p.avg !== null ? `${p.avg.toFixed(1)}<span class="p-unit"> m</span>` : 'N/A';
         const tempStr = p.temp !== null ? `${p.temp.toFixed(1)}<span class="p-unit"> ℃</span>` : 'N/A';
+        const sqmStr = p.sqm !== null ? `${p.sqm.toFixed(2)}<span class="p-unit"> mag</span>` : 'N/A';
         const color  = elevToColor(p.min);
 
         layer.bindPopup(`
@@ -248,9 +249,13 @@ fetch('data/voronoi.geojson')
               </div>
             </div>
             <div class="p-elev" style="margin-top: 8px; border-top: 1px solid #333; padding-top: 8px;">
-              <div class="p-val" style="width: 100%;">
-                <span class="p-label">8月最高気温平年値</span>
+              <div class="p-val" style="width: 50%;">
+                <span class="p-label">8月最高気温</span>
                 <span class="p-num" style="color:#ffb199">${tempStr}</span>
+              </div>
+              <div class="p-val" style="width: 50%; padding-left: 8px; border-left: 1px solid #333;">
+                <span class="p-label">星空の明るさ</span>
+                <span class="p-num" style="color:#a78bfa">${sqmStr}</span>
               </div>
             </div>
             <div style="margin-top: 8px; border-top: 1px dashed #444; padding-top: 8px; font-size: 0.68rem; color: #888; text-align: center; font-style: italic;">

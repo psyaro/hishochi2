@@ -101,6 +101,16 @@ def load_elevation_grids():
 
 # ── Step 3: 緯度経度 → 標高のベクトル化ルックアップ ──────────────────────
 
+def mcd_to_sqm(mcd_value):
+    """輝度(mcd/m^2)をSQM(mag/arcsec^2)に変換する。"""
+    natural_sky = 0.174
+    total_brightness = mcd_value + natural_sky
+    # 0以下や異常値はnp.nanにする
+    with np.errstate(divide='ignore', invalid='ignore'):
+        sqm = 22.0 - 2.5 * np.log10(total_brightness / natural_sky)
+    return sqm
+
+
 def lookup_elevations(df: pd.DataFrame, elev_avg: np.ndarray, elev_min: np.ndarray, temp_max: np.ndarray) -> pd.DataFrame:
     """
     pandas の Series でグリッドインデックスを一括計算し、
@@ -140,10 +150,25 @@ def lookup_elevations(df: pd.DataFrame, elev_avg: np.ndarray, elev_min: np.ndarr
     min_vals[~in_range] = np.nan
     temp_vals[~in_range] = np.nan
 
+    # ── SQM（星空の明るさ）ルックアップ ──
+    print("         星空の明るさ（SQM値）ルックアップ中...")
+    tif_path = r"D:\scripts\geog\sqm-light-pollution_function-source\Japan_LightPollution.tif"
+    import rasterio
+
+    coords = [(lon, lat) for lon, lat in zip(df["lon"], df["lat"])]
+    with rasterio.open(tif_path) as src:
+        sampled_mcd = np.array([val[0] for val in src.sample(coords)], dtype=float)
+
+    valid_mask = (sampled_mcd >= 0) & (sampled_mcd < 1e10)
+    sqm_vals = np.full(sampled_mcd.shape, np.nan)
+    sqm_vals[valid_mask] = mcd_to_sqm(sampled_mcd[valid_mask])
+    sqm_vals[~in_range] = np.nan
+
     df = df.copy()
     df["elev_avg_m"] = np.where(np.isfinite(avg_vals), avg_vals.round(1), np.nan)
     df["elev_min_m"] = np.where(np.isfinite(min_vals), min_vals.round(1), np.nan)
     df["temp_max_aug"] = np.where(np.isfinite(temp_vals), temp_vals.round(1), np.nan)
+    df["sqm"] = np.where(np.isfinite(sqm_vals), sqm_vals.round(2), np.nan)
     df["is_ocean"]   = np.isnan(df["elev_avg_m"])
 
     land = (~df["is_ocean"]).sum()
@@ -176,6 +201,7 @@ def save_outputs(df: pd.DataFrame):
         avg = None if (row.is_ocean or not np.isfinite(row.elev_avg_m)) else row.elev_avg_m
         mn  = None if (row.is_ocean or not np.isfinite(row.elev_min_m)) else row.elev_min_m
         tmp = None if (row.is_ocean or not np.isfinite(row.temp_max_aug)) else row.temp_max_aug
+        sqm = None if (row.is_ocean or not np.isfinite(row.sqm)) else row.sqm
         payload.append({
             "name":     row.bus_stop_name,
             "operator": row.operator,
@@ -184,6 +210,7 @@ def save_outputs(df: pd.DataFrame):
             "avg":      avg,
             "min":      mn,
             "temp":     tmp,
+            "sqm":      sqm,
         })
 
     json_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")

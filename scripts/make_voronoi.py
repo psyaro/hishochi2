@@ -98,7 +98,7 @@ def main():
     print("[2/4] 空間結合中...")
     t1 = time.time()
     join_cols = ["station_code", "station_name", "line_name", "operator",
-                 "lon", "lat", "elev_min_m", "elev_avg_m", "temp_max_aug", "geometry"]
+                 "lon", "lat", "elev_min_m", "elev_avg_m", "temp_max_aug", "sqm", "geometry"]
     joined = gpd.sjoin(
         gdf_vor,
         gdf_pts[join_cols],
@@ -140,6 +140,7 @@ def main():
                 "min":  round(float(row.elev_min_m), 1) if pd.notna(row.elev_min_m) else None,
                 "avg":  round(float(row.elev_avg_m), 1) if pd.notna(row.elev_avg_m) else None,
                 "temp": round(float(row.temp_max_aug), 1) if pd.notna(row.temp_max_aug) else None,
+                "sqm":  round(float(row.sqm), 2) if pd.notna(row.sqm) else None,
             },
         })
 
