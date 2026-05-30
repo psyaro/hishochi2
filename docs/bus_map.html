@@ -207,7 +207,6 @@
       outline: none !important;
       cursor: pointer !important;
     }
-    }
     #opacitySlider::-webkit-slider-thumb {
       -webkit-appearance: none !important;
       appearance: none !important;
@@ -216,6 +215,62 @@
       border-radius: 50% !important;
       background: #a78bfa !important;
       box-shadow: 0 0 8px rgba(167, 139, 250, 0.6) !important;
+    }
+
+    /* ── トグルスイッチスタイル ── */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #ccc;
+      margin-left: auto; /* 右寄せ */
+      margin-right: 20px;
+    }
+    .toggle-label {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #333;
+      transition: .3s;
+      border-radius: 22px;
+      border: 1px solid #444;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #aaa;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: rgba(167, 139, 250, 0.3);
+      border-color: #a78bfa;
+    }
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: #a78bfa;
+      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
     }
 
     /* ── フローティング星空解説ボタン ── */
@@ -358,7 +413,14 @@
 <header>
   <h1>全国バス停標高＆最高気温地図</h1>
   <p>8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット</p>
-  <a class="back-btn" href="index.html">← 標高検索に戻る</a>
+  <div class="toggle-container" style="margin-left: auto; margin-right: 20px;">
+    <span class="toggle-label" id="modeText" style="color: #ccc; font-size: 0.8rem; font-weight: 600;">8月最高気温 🌡️</span>
+    <label class="switch">
+      <input type="checkbox" id="colorModeToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <a class="back-btn" href="index.html" style="margin-left: 0;">← 標高検索に戻る</a>
 </header>
 
 <div id="map">
@@ -487,6 +549,31 @@ const TEMP_COLORS = [
   { max: 32.0, color: '#ff6d00', label: '30〜32℃ (猛暑)' },
   { max: 99.0, color: '#dd2c00', label: '32℃以上 (酷暑 🔥)' }
 ];
+
+const SQM_COLOR_STOPS = [
+  { max: 17.0, color: '#ffffff' },
+  { max: 17.5, color: '#ffe4e1' },
+  { max: 18.0, color: '#ffb199' },
+  { max: 18.5, color: '#ffa07a' },
+  { max: 19.0, color: '#ffeb3b' },
+  { max: 19.5, color: '#c6ff00' },
+  { max: 20.0, color: '#00e676' },
+  { max: 20.5, color: '#1de9b6' },
+  { max: 21.0, color: '#00b0ff' },
+  { max: 21.3, color: '#2979ff' },
+  { max: 21.6, color: '#1a237e' },
+  { max: 21.8, color: '#6a1b9a' },
+  { max: 99.0, color: '#311b92' }
+];
+
+function getSqmColor(sqm) {
+  if (sqm === null || sqm === undefined) return 'rgba(80,80,80,0.4)';
+  for (const stop of SQM_COLOR_STOPS) {
+    if (sqm <= stop.max) return stop.color;
+  }
+  return '#311b92';
+}
+
 
 function getBortleInfo(sqm) {
   if (sqm === null || sqm === undefined) return { class: 'N/A', label: '不明', desc: 'データなし' };
@@ -663,7 +750,7 @@ function updateMarkers() {
   const renderList = visibleStops.slice(0, maxToRender);
 
   renderList.forEach(stop => {
-    const color = getTempColor(stop.temp);
+    const color = currentDisplayMode === 'temp' ? getTempColor(stop.temp) : getSqmColor(stop.sqm);
     
     const marker = L.circleMarker([stop.lat, stop.lon], {
       renderer: canvasRenderer,
@@ -760,20 +847,64 @@ map.on('moveend', updateMarkers);
 map.on('zoomend', updateMarkers);
 
 // ── 凡例コントロールの追加 ─────────────────────────────────────────────────
+let currentDisplayMode = 'temp';
+
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function() {
   const div = L.DomUtil.create('div', 'legend');
-  div.innerHTML = `<h3>8月最高気温</h3>`;
-  TEMP_COLORS.forEach(item => {
-    div.innerHTML += `
-      <div class="legend-item">
-        <span class="legend-color" style="background:${item.color}"></span>
-        <span>${item.label}</span>
-      </div>`;
-  });
+  setTimeout(() => updateLegend(), 50);
   return div;
 };
 legend.addTo(map);
+
+function updateLegend() {
+  const legendElement = document.querySelector('.legend');
+  if (!legendElement) return;
+
+  if (currentDisplayMode === 'temp') {
+    let html = `<h3>8月最高気温</h3>`;
+    TEMP_COLORS.forEach(item => {
+      html += `
+        <div class="legend-item" style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#c9d1d9; margin-bottom:6px;">
+          <span class="legend-color" style="width:12px; height:12px; border-radius:50%; background:${item.color}"></span>
+          <span>${item.label}</span>
+        </div>`;
+    });
+    legendElement.innerHTML = html;
+  } else {
+    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px; overflow-y:auto; padding-right:4px;">`;
+    const labels = [
+      '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
+      '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
+      '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)'
+    ];
+    SQM_COLOR_STOPS.forEach((stop, i) => {
+      html += `
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; margin-bottom:3px; color:#aaa;">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${stop.color}; border:0.5px solid #444;"></span>
+          <span>${labels[i]}</span>
+        </div>`;
+    });
+    html += '</div>';
+    legendElement.innerHTML = html;
+  }
+}
+
+// トグルイベント監視
+document.getElementById('colorModeToggle').addEventListener('change', function(e) {
+  currentDisplayMode = e.target.checked ? 'sqm' : 'temp';
+  document.getElementById('modeText').textContent = e.target.checked ? '星空の明るさ 🌌' : '8月最高気温 🌡️';
+  
+  const pTag = document.querySelector('header p');
+  if (pTag) {
+    pTag.textContent = currentDisplayMode === 'temp' 
+      ? '8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット' 
+      : '星空の明るさ（SQM値）に応じたカラープロット（13段階細密段彩）';
+  }
+
+  updateLegend();
+  updateMarkers();
+});
 
 // ── 出典表記の追加 ──────────────────────────────────────────────────────────
 map.attributionControl.addAttribution(

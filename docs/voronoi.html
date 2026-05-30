@@ -131,6 +131,62 @@
     #loading p { font-size: 0.9rem; color: #ccc; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── トグルスイッチスタイル ── */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #ccc;
+      margin-left: auto; /* 右寄せ */
+      margin-right: 20px;
+    }
+    .toggle-label {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #333;
+      transition: .3s;
+      border-radius: 22px;
+      border: 1px solid #444;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #aaa;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: rgba(167, 139, 250, 0.3);
+      border-color: #a78bfa;
+    }
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: #a78bfa;
+      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
+    }
+
     /* ── フローティング星空解説ボタン ── */
     .sky-info-btn {
       position: absolute;
@@ -271,6 +327,13 @@
 <header>
   <h1>全国駅ボロノイ標高地図</h1>
   <p>各駅の最低標高（250mメッシュ）でボロノイ領域を色分け</p>
+  <div class="toggle-container">
+    <span class="toggle-label" id="modeText">最低標高 ⛰️</span>
+    <label class="switch">
+      <input type="checkbox" id="colorModeToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
   <a href="index.html">← 標高検索に戻る</a>
 </header>
 
@@ -379,6 +442,31 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+const SQM_COLOR_STOPS = [
+  { max: 17.0, color: '#ffffff' },
+  { max: 17.5, color: '#ffe4e1' },
+  { max: 18.0, color: '#ffb199' },
+  { max: 18.5, color: '#ffa07a' },
+  { max: 19.0, color: '#ffeb3b' },
+  { max: 19.5, color: '#c6ff00' },
+  { max: 20.0, color: '#00e676' },
+  { max: 20.5, color: '#1de9b6' },
+  { max: 21.0, color: '#00b0ff' },
+  { max: 21.3, color: '#2979ff' },
+  { max: 21.6, color: '#1a237e' },
+  { max: 21.8, color: '#6a1b9a' },
+  { max: 99.0, color: '#311b92' }
+];
+
+function getSqmColor(sqm) {
+  if (sqm === null || sqm === undefined) return 'rgba(80,80,80,0.4)';
+  for (const stop of SQM_COLOR_STOPS) {
+    if (sqm <= stop.max) return stop.color;
+  }
+  return '#311b92';
+}
+
+
 function getBortleInfo(sqm) {
   if (sqm === null || sqm === undefined) return { class: 'N/A', label: '不明', desc: 'データなし' };
   if (sqm >= 21.99) {
@@ -569,29 +657,69 @@ fetch('data/voronoi.geojson')
   });
 
 // ── 凡例 ────────────────────────────────────────────────────────────────────
+let currentDisplayMode = 'elev';
+
 const legendDiv = L.control({ position: 'bottomright' });
 legendDiv.onAdd = () => {
   const div = L.DomUtil.create('div', 'legend');
-
-  // グラデーションバーを CSS で生成
-  const gradStops = COLOR_STOPS.map(([, c]) => `rgb(${c.join(',')})`).join(',');
-  const labels = COLOR_STOPS
-    .filter((_, i) => i % 2 === 0)
-    .map(([e]) => `${e >= 0 ? e : e}m`);
-
-  div.innerHTML = `
-    <h3>最低標高</h3>
-    <div class="legend-bar"
-         style="background: linear-gradient(to right, ${gradStops})"></div>
-    <div class="legend-labels">
-      <span>${COLOR_STOPS[0][0]}m</span>
-      <span>${COLOR_STOPS[Math.floor(COLOR_STOPS.length/2)][0]}m</span>
-      <span>${COLOR_STOPS[COLOR_STOPS.length-1][0]}m</span>
-    </div>
-  `;
+  // カレントディレクトリ移動イベントの動作が完了してから中身を詰める
+  setTimeout(() => updateLegend(), 50);
   return div;
 };
 legendDiv.addTo(map);
+
+function updateLegend() {
+  const legendElement = document.querySelector('.legend');
+  if (!legendElement) return;
+
+  if (currentDisplayMode === 'elev') {
+    const gradStops = COLOR_STOPS.map(([, c]) => `rgb(${c.join(',')})`).join(',');
+    legendElement.innerHTML = `
+      <h3>最低標高</h3>
+      <div class="legend-bar"
+           style="background: linear-gradient(to right, ${gradStops})"></div>
+      <div class="legend-labels">
+        <span>${COLOR_STOPS[0][0]}m</span>
+        <span>${COLOR_STOPS[Math.floor(COLOR_STOPS.length/2)][0]}m</span>
+        <span>${COLOR_STOPS[COLOR_STOPS.length-1][0]}m</span>
+      </div>
+    `;
+  } else {
+    // 星空の明るさは段彩リストとして細密（13段階）に縦並び表示
+    let listHtml = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px; overflow-y:auto; padding-right:4px;">`;
+    const labels = [
+      '17.0以下 (都会 🚨)', '17.0〜17.5', '17.5〜18.0', '18.0〜18.5',
+      '18.5〜19.0', '19.0〜19.5', '19.5〜20.0 (田舎 🌠)', '20.0〜20.5',
+      '20.5〜21.0 (星空鮮明)', '21.0〜21.3', '21.3〜21.6 (卓越した暗さ)', '21.6〜21.8', '21.8以上 (宇宙の暗闇 ✨)'
+    ];
+    SQM_COLOR_STOPS.forEach((stop, i) => {
+      listHtml += `
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; margin-bottom:3px; color:#aaa;">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${stop.color}; border:0.5px solid #444;"></span>
+          <span>${labels[i]}</span>
+        </div>`;
+    });
+    listHtml += '</div>';
+    legendElement.innerHTML = listHtml;
+  }
+}
+
+// トグルイベント監視
+document.getElementById('colorModeToggle').addEventListener('change', function(e) {
+  currentDisplayMode = e.target.checked ? 'sqm' : 'elev';
+  document.getElementById('modeText').innerHTML = e.target.checked ? '星空の明るさ 🌌' : '最低標高 ⛰️';
+  
+  if (voronoiLayer) {
+    voronoiLayer.setStyle(feature => {
+      const val = currentDisplayMode === 'elev' ? feature.properties.min : feature.properties.sqm;
+      return {
+        fillColor: currentDisplayMode === 'elev' ? elevToColor(val) : getSqmColor(val),
+        fillOpacity: currentDisplayMode === 'elev' ? 0.65 : 0.75,
+      };
+    });
+  }
+  updateLegend();
+});
 
 // ── 出典表記 ─────────────────────────────────────────────────────────────────
 map.attributionControl.addAttribution(
