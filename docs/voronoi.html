@@ -130,6 +130,140 @@
     }
     #loading p { font-size: 0.9rem; color: #ccc; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── フローティング星空解説ボタン ── */
+    .sky-info-btn {
+      position: absolute;
+      bottom: 24px;
+      left: 10px;
+      z-index: 900;
+      background: rgba(167, 139, 250, 0.2);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      color: #a78bfa;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sky-info-btn:hover {
+      background: rgba(167, 139, 250, 0.35);
+      border-color: #a78bfa;
+      transform: translateY(-2px);
+    }
+
+    /* ── 星空解説モーダル ── */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 10, 12, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 3000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: rgba(22, 27, 34, 0.9);
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 24px;
+      width: 90%;
+      max-width: 620px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 30px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(240, 246, 252, 0.1);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #a78bfa;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #f0f6fc; }
+    .modal-body {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #c9d1d9;
+      text-align: left;
+    }
+    .modal-body h3 {
+      font-size: 0.95rem;
+      margin: 18px 0 8px;
+      color: #f0f6fc;
+      border-left: 3px solid #a78bfa;
+      padding-left: 8px;
+    }
+    .modal-body p { margin-bottom: 12px; }
+    .bortle-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 0.78rem;
+    }
+    .bortle-table th, .bortle-table td {
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 8px 10px;
+      text-align: left;
+    }
+    .bortle-table th {
+      background: rgba(167, 139, 250, 0.1);
+      color: #a78bfa;
+    }
+    .bortle-table tr:nth-child(even) {
+      background: rgba(240, 246, 252, 0.02);
+    }
+    .bortle-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .credit-box {
+      background: rgba(240, 246, 252, 0.04);
+      border: 1px dashed rgba(240, 246, 252, 0.15);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 0.78rem;
+      color: #8b949e;
+    }
+    .credit-box a { color: #58a6ff; text-decoration: none; }
+    .credit-box a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -147,8 +281,126 @@
   </div>
 </div>
 
+<!-- 星空解説フローティングボタン -->
+<button class="sky-info-btn" id="openSkyModal">
+  🌌 星空・光害の解説 & クレジット
+</button>
+
+<!-- 星空解説モーダル -->
+<div class="modal-overlay" id="skyModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>星空の明るさと光害（ボートル・スケール）</h2>
+      <button class="modal-close" id="closeSkyModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>
+        本システムで表示している「星空の明るさ」は、夜空の暗さを示す物理指標である <strong>SQM (Sky Quality Meter) 値</strong>（単位: mag/arcsec²）および、アマチュア天文学で広く使われる夜空の暗さの指標である <strong>ボートル・スケール (Bortle scale)</strong> に基づいています。
+      </p>
+      
+      <h3>ボートル・スケールと天の川の見えやすさ</h3>
+      <p>数値が大きいほど人工光による光害が深刻で、星が見えにくくなります。</p>
+      
+      <table class="bortle-table">
+        <thead>
+          <tr>
+            <th>クラス</th>
+            <th>夜空の分類 (Label)</th>
+            <th>SQM基準</th>
+            <th>天の川の見えやすさ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="bortle-badge" style="background:#00e5ff; color:#000;">Class 1</span></td>
+            <td>卓越して暗い空 (Excellent dark sky)</td>
+            <td>21.99–22.00</td>
+            <td>天の川が肉眼で極めて鮮明に見え、三角座銀河(M33)も容易に観察できます。最高峰の夜空です。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#00b0ff; color:#000;">Class 2</span></td>
+            <td>平均的な暗い空 (Average dark sky)</td>
+            <td>21.89–21.99</td>
+            <td>天の川が非常に鮮明で、中心部の複雑な構造や「ちり星雲」の微細な明暗が肉眼で確認できます。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#1de9b6; color:#000;">Class 3</span></td>
+            <td>田舎の空 (Rural sky)</td>
+            <td>21.69–21.89</td>
+            <td>天の川の構造がよく見えます。地平線付近にわずかに光害を感じる程度で、天頂は十分に暗いです。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#00e676; color:#000;">Class 4</span></td>
+            <td>田舎と郊外の境界 (Transition)</td>
+            <td>20.49–21.69</td>
+            <td>天の川は天頂付近で高いコントラストを持ち、複雑な構造が確認できます。地平線近くには光害が見えます。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#c6ff00; color:#000;">Class 5</span></td>
+            <td>郊外の空 (Suburban sky)</td>
+            <td>19.50–20.49</td>
+            <td>天の川は天頂付近で非常に弱く、白っぽくかすんで見える程度です。地平線は光害ドームに囲まれます。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#ffd600; color:#000;">Class 6</span></td>
+            <td>明るい郊外の空 (Bright suburban)</td>
+            <td>18.94–19.50</td>
+            <td>天の川は天頂付近でのみかろうじて見える程度です。空全体が光害で白く明るいです。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#ffab00; color:#000;">Class 7</span></td>
+            <td>郊外と都市の境界 (Transition)</td>
+            <td>18.38–18.94</td>
+            <td>天の川は天頂であっても完全に見えません。空全体が光害で覆われ、淡い天体は見えません。</td>
+          </tr>
+          <tr>
+            <td><span class="bortle-badge" style="background:#dd2c00; color:#fff;">Class 8-9</span></td>
+            <td>都市・都心の空 (City / Inner city)</td>
+            <td>18.38未満</td>
+            <td>光害が極めて深刻で、天の川は完全に見えません。主要な明るい一等星のみが確認できます。</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <h3>データ出典・クレジット</h3>
+      <div class="credit-box">
+        <p>使用しているデータは、ATLAS 2015のものです。</p>
+        <p style="margin-top: 6px; font-style: italic; line-height: 1.4;">
+          Falchi, Fabio; Cinzano, Pierantonio; Duriscoe, Dan; Kyba, Christopher CM; Elvidge, Christopher D.; Baugh, Kimberly; 
+          Portnov, Boris; Rybnikova, Nataliya A.; Furgoni, Riccardo (2016): 
+          Supplement to: The New World Atlas of Artificial Night Sky Brightness. V. 1.1. GFZ Data Services. <br>
+          URL: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">https://doi.org/10.5880/GFZ.1.4.2016.001</a><br>
+          Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+function getBortleInfo(sqm) {
+  if (sqm === null || sqm === undefined) return { class: 'N/A', label: '不明', desc: 'データなし' };
+  if (sqm >= 21.99) {
+    return { class: 1, label: '卓越して暗い空 (クラス1) 🌌', desc: '天の川が圧倒的な明るさで輝き、M33三角座銀河も肉眼で容易に見えます。最高峰の夜空です。' };
+  } else if (sqm >= 21.89) {
+    return { class: 2, label: '平均的な暗い空 (クラス2) ✨', desc: '天の川が極めて鮮明で、中心部の複雑な構造や微細な明暗が肉眼でくっきり観察できます。' };
+  } else if (sqm >= 21.69) {
+    return { class: 3, label: '田舎の空 (クラス3) 🌠', desc: '天の川の構造が非常によく見えます。地平線付近にのみわずかに街明かりを感じる程度です。' };
+  } else if (sqm >= 20.49) {
+    return { class: 4, label: '田舎と郊外の境界 (クラス4) 🏡', desc: '天の川は天頂付近で複雑な構造が確認できます。地平線近くには光害ドームが見えます。' };
+  } else if (sqm >= 19.50) {
+    return { class: 5, label: '郊外の空 (クラス5) 🌆', desc: '天の川は天頂付近でかなり薄く、白っぽくかすんで見える程度です。全体的に街明かりの影響があります。' };
+  } else if (sqm >= 18.94) {
+    return { class: 6, label: '明るい郊外の空 (クラス6) 🏢', desc: '天の川は天頂付近でのみかろうじて見える程度です。空全体が光害でかなり白く明るいです。' };
+  } else if (sqm >= 18.38) {
+    return { class: 7, label: '郊外と都市の境界 (クラス7) 🌃', desc: '天の川は天頂であっても完全に見えません。空全体が光害で覆われ白っぽいです。' };
+  } else {
+    return { class: '8-9', label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
+  }
+}
+
+
 // ── 標高 → カラー変換 ─────────────────────────────────────────────────────
 // 制御点: [標高m, [R, G, B]]
 const COLOR_STOPS = [
@@ -233,6 +485,13 @@ fetch('data/voronoi.geojson')
         const tempStr = p.temp !== null ? `${p.temp.toFixed(1)}<span class="p-unit"> ℃</span>` : 'N/A';
         const sqmStr = p.sqm !== null ? `${p.sqm.toFixed(2)}<span class="p-unit"> mag</span>` : 'N/A';
         const color  = elevToColor(p.min);
+        const bortle = getBortleInfo(p.sqm);
+        const starComment = p.sqm !== null ? `
+          <div style="margin-top: 8px; font-size: 0.72rem; color: #a78bfa; border-top: 1px solid rgba(167,139,250,0.15); padding-top: 8px; line-height: 1.4; text-align: left;">
+            🌟 <strong>${bortle.label}</strong><br>
+            <span style="color:#aaa;">${bortle.desc}</span>
+          </div>
+        ` : '';
 
         layer.bindPopup(`
           <div class="popup-inner">
@@ -258,6 +517,7 @@ fetch('data/voronoi.geojson')
                 <span class="p-num" style="color:#a78bfa">${sqmStr}</span>
               </div>
             </div>
+            ${starComment}
             <div style="margin-top: 8px; border-top: 1px dashed #444; padding-top: 8px; font-size: 0.68rem; color: #888; text-align: center; font-style: italic;">
               🖱️ ダブルクリックで Google Map を開く
             </div>
@@ -335,8 +595,15 @@ legendDiv.addTo(map);
 
 // ── 出典表記 ─────────────────────────────────────────────────────────────────
 map.attributionControl.addAttribution(
-  '標高: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-d.html" target="_blank">国土数値情報 G04-d（国土交通省）</a>'
+  '標高: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-d.html" target="_blank">国土交通省</a> / ' +
+  '光害: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">Falchi et al. (ATLAS 2015)</a>'
 );
+
+// ── 星空解説モーダル制御 ──
+const skyModal = document.getElementById('skyModal');
+document.getElementById('openSkyModal').addEventListener('click', () => skyModal.classList.add('active'));
+document.getElementById('closeSkyModal').addEventListener('click', () => skyModal.classList.remove('active'));
+skyModal.addEventListener('click', e => { if (e.target === skyModal) skyModal.classList.remove('active'); });
 </script>
 </body>
 </html>
