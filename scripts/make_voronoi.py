@@ -81,6 +81,9 @@ def main():
     df = pd.read_parquet(IN_PKL)
     # elev_min_m が NaN の駅は除外 (ないはずだが念のため)
     df = df.dropna(subset=["elev_min_m"]).reset_index(drop=True)
+    # svf 列がない場合は NaN で補完（calc_sky_openness.py 未実行時のフォールバック）
+    if "svf" not in df.columns:
+        df["svf"] = float("nan")
     gdf_pts = gpd.GeoDataFrame(
         df,
         geometry=gpd.points_from_xy(df["lon"], df["lat"]),
@@ -98,7 +101,7 @@ def main():
     print("[2/4] 空間結合中...")
     t1 = time.time()
     join_cols = ["station_code", "station_name", "line_name", "operator",
-                 "lon", "lat", "elev_min_m", "elev_avg_m", "temp_max_aug", "sqm", "geometry"]
+                 "lon", "lat", "elev_min_m", "elev_avg_m", "temp_max_aug", "sqm", "svf", "geometry"]
     joined = gpd.sjoin(
         gdf_vor,
         gdf_pts[join_cols],
@@ -141,6 +144,7 @@ def main():
                 "avg":  round(float(row.elev_avg_m), 1) if pd.notna(row.elev_avg_m) else None,
                 "temp": round(float(row.temp_max_aug), 1) if pd.notna(row.temp_max_aug) else None,
                 "sqm":  round(float(row.sqm), 2) if pd.notna(row.sqm) else None,
+                "svf":  round(float(row.svf), 3) if pd.notna(row.svf) else None,
             },
         })
 

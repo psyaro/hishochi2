@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全国駅ボロノイ標高地図 — 最低標高</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="map-common.css"/>
+  <link rel="stylesheet" href="map-common.css?v=20260531"/>
   <style>
     body {
       font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
@@ -129,6 +129,43 @@
     .popup-inner .p-label{ font-size: 0.68rem; color: #888; text-transform: uppercase; letter-spacing: .5px; }
     .popup-inner .p-num  { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
     .popup-inner .p-unit { font-size: 0.75rem; color: #888; }
+    /* 天空率ブロック */
+    .popup-inner .p-svf-block {
+      margin-top: 8px;
+      border-top: 1px solid rgba(99,179,237,0.2);
+      padding-top: 8px;
+    }
+    .popup-inner .p-svf-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .popup-inner .p-svf-badge {
+      font-size: 0.7rem;
+      color: #63b3ed;
+      font-weight: 600;
+    }
+    .popup-inner .p-svf-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(99,179,237,0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 3px;
+    }
+    .popup-inner .p-svf-bar {
+      height: 100%;
+      background: linear-gradient(to right, #2979ff, #63b3ed);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .popup-inner .p-svf-num {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #63b3ed;
+      text-align: right;
+    }
   </style>
 </head>
 <body>
@@ -231,6 +268,18 @@ function getBortleInfo(sqm) {
   return { label: '都市・都心の空 (クラス8-9) 🚨', desc: '光害が極めて深刻で、天の川は完全に見えません。主要な一等星しか見えません。' };
 }
 
+function getSvfInfo(svf) {
+  if (svf == null) return null;
+  const pct = Math.round(svf * 1000) / 10;  // 小数1桁%
+  let icon, label;
+  if (svf >= 0.95)      { icon = '🌅'; label = '非常に開けた空'; }
+  else if (svf >= 0.88) { icon = '🔭'; label = '開けた空'; }
+  else if (svf >= 0.78) { icon = '⛰️'; label = 'やや開けた空'; }
+  else if (svf >= 0.65) { icon = '🏔️'; label = '山間・谷間の空'; }
+  else                  { icon = '🗻'; label = '囲まれた空'; }
+  return { pct, icon, label };
+}
+
 // ── 標高カラー ──────────────────────────────────────────────────────────────
 const COLOR_STOPS = [
   [-10,  [ 20,  40, 120]],
@@ -304,7 +353,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 // ── GeoJSON 読み込み ─────────────────────────────────────────────────────────
 let voronoiLayer = null;
 
-fetch('data/voronoi.geojson')
+fetch('data/voronoi.geojson?v=20260531')
   .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
   .then(data => {
     document.getElementById('loading').style.display = 'none';
@@ -319,9 +368,23 @@ fetch('data/voronoi.geojson')
         const sqmStr  = p.sqm  != null ? `${p.sqm.toFixed(2)}<span class="p-unit"> mag</span>` : 'N/A';
         const color   = elevToColor(p.min);
         const bortle  = getBortleInfo(p.sqm);
+        const svfInfo = getSvfInfo(p.svf);
+
         const starComment = p.sqm != null ? `
           <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(167,139,250,0.15);padding-top:8px;text-align:left;">
             🌟 <strong>${bortle.label}</strong>
+          </div>` : '';
+
+        const svfBlock = svfInfo != null ? `
+          <div class="p-svf-block">
+            <div class="p-svf-header">
+              <span class="p-label">天空率（地形開放度）</span>
+              <span class="p-svf-badge">${svfInfo.icon} ${svfInfo.label}</span>
+            </div>
+            <div class="p-svf-bar-wrap">
+              <div class="p-svf-bar" style="width:${svfInfo.pct}%"></div>
+            </div>
+            <div class="p-svf-num">${svfInfo.pct}<span class="p-unit"> %</span></div>
           </div>` : '';
 
         layer.bindPopup(`
@@ -349,11 +412,12 @@ fetch('data/voronoi.geojson')
               </div>
             </div>
             ${starComment}
+            ${svfBlock}
             <div style="margin-top:8px;border-top:1px dashed #444;padding-top:8px;font-size:0.68rem;color:#888;text-align:center;font-style:italic;">
               🖱️ ダブルクリックで Google Map を開く
             </div>
           </div>
-        `, { maxWidth: 260 });
+        `, { maxWidth: 280 });
 
         layer.on('mouseover', e => {
           e.target.setStyle({ fillOpacity: 0.9, weight: 1.2, color: '#fff' });
