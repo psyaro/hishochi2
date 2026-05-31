@@ -59,12 +59,13 @@
     }
     header .back-btn:hover { color: #8bc1ff; text-decoration: underline; }
 
-    /* スマホ：サブタイトルを非表示、コンパクト化 */
+    /* スマホ：サブタイトル非表示、1行に収める */
     @media (max-width: 600px) {
       header p { display: none; }
-      header { padding: 6px 12px; gap: 8px; }
-      header h1 { font-size: 0.88rem; }
-      .toggle-label { font-size: 0.72rem; }
+      header { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; }
+      header h1 { font-size: 0.82rem; }
+      .toggle-label { font-size: 0.7rem; }
+      header .back-btn { font-size: 0.7rem; }
     }
 
     /* ── 地図 ── */
@@ -114,20 +115,38 @@
       background: rgba(22, 27, 34, 0.95);
       border: 1px solid rgba(240, 246, 252, 0.1);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       min-width: 148px;
-      pointer-events: none;
+      pointer-events: auto;
       backdrop-filter: blur(8px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .legend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: default;
     }
     .legend h3 {
       font-size: 0.72rem;
       color: #8b949e;
       text-transform: uppercase;
       letter-spacing: .5px;
-      margin-bottom: 8px;
+      margin: 0;
       font-weight: 600;
     }
+    .legend-toggle {
+      background: none;
+      border: none;
+      color: #8b949e;
+      font-size: 0.7rem;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .legend-body { margin-top: 8px; }
+    .legend-body.collapsed { display: none; }
     .legend-item {
       display: flex;
       align-items: center;
@@ -135,6 +154,11 @@
       font-size: 0.73rem;
       color: #c9d1d9;
       margin-bottom: 5px;
+    }
+    /* スマホ：凡例をデフォルト折りたたみ */
+    @media (max-width: 600px) {
+      .legend { min-width: 120px; padding: 8px 10px; }
+      .legend-header { cursor: pointer; }
     }
 
     /* ── 不透明度コントロール ── */
@@ -325,9 +349,11 @@ function getBortleInfo(sqm) {
 const map = L.map('map', {
   center: [36.72, 137.96],
   zoom: 12,
-  zoomControl: true,
+  zoomControl: false,
   attributionControl: true,
 });
+// ズームコントロールを右下に配置（ツールチップと左上で干渉しないよう）
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 const baseMaps = {
   "普通のOSM (標準地図)": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -488,7 +514,7 @@ function updateMarkers() {
         <div style="margin-top:8px;border-top:1px dashed rgba(240,246,252,0.15);padding-top:6px;font-size:0.65rem;color:#8b949e;text-align:center;font-style:italic;">
           🖱️ ダブルクリックで Google Map を開く
         </div>
-      </div>`, { sticky: true, direction: 'top', offset: [0, -5] });
+      </div>`, { sticky: true, direction: 'auto', offset: [0, -5] });
 
     marker.on('mouseover', function() {
       this.setStyle({ radius: 8.0, fillOpacity: 1.0, weight: 1.2, color: '#ffffff' });
@@ -509,9 +535,14 @@ map.on('moveend', updateMarkers);
 map.on('zoomend', updateMarkers);
 
 // ── 凡例 ─────────────────────────────────────────────────────────────────────
+const isMobile = () => window.matchMedia('(max-width: 600px)').matches;
+let legendCollapsed = isMobile(); // スマホはデフォルト折りたたみ
+
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function() {
   const div = L.DomUtil.create('div', 'legend');
+  L.DomEvent.disableClickPropagation(div);
+  L.DomEvent.disableScrollPropagation(div);
   setTimeout(() => updateLegend(), 50);
   return div;
 };
@@ -520,24 +551,47 @@ legend.addTo(map);
 function updateLegend() {
   const el = document.querySelector('.legend');
   if (!el) return;
+
+  const collapsed = legendCollapsed;
+  const arrow = collapsed ? '▶' : '▼';
+
+  let bodyHtml = '';
   if (currentDisplayMode === 'temp') {
-    let html = `<h3>8月最高気温</h3>`;
     TEMP_COLORS.forEach(item => {
-      html += `<div class="legend-item">
-        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
+      bodyHtml += `<div class="legend-item">
+        <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
         <span>${item.label}</span></div>`;
     });
-    el.innerHTML = html;
   } else {
-    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px;overflow-y:auto;padding-right:4px;">`;
+    bodyHtml += `<div style="max-height:140px;overflow-y:auto;padding-right:4px;">`;
     SQM_COLOR_STOPS.forEach((stop, i) => {
-      html += `<div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;margin-bottom:3px;color:#aaa;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
+      bodyHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:0.67rem;margin-bottom:3px;color:#aaa;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
         <span>${SQM_LABELS[i]}</span></div>`;
     });
-    html += '</div>';
-    el.innerHTML = html;
+    bodyHtml += `</div>`;
   }
+
+  const title = currentDisplayMode === 'temp' ? '8月最高気温' : '星空の明るさ (mag)';
+  el.innerHTML = `
+    <div class="legend-header" id="legendHeader">
+      <h3>${title}</h3>
+      <button class="legend-toggle" id="legendToggleBtn">${arrow}</button>
+    </div>
+    <div class="legend-body${collapsed ? ' collapsed' : ''}" id="legendBody">
+      ${bodyHtml}
+    </div>`;
+
+  document.getElementById('legendToggleBtn').addEventListener('click', () => {
+    legendCollapsed = !legendCollapsed;
+    updateLegend();
+  });
+  // スマホでヘッダー全体タップでも開閉
+  document.getElementById('legendHeader').addEventListener('click', (e) => {
+    if (e.target.id === 'legendToggleBtn') return;
+    legendCollapsed = !legendCollapsed;
+    updateLegend();
+  });
 }
 
 // ── トグル ───────────────────────────────────────────────────────────────────
