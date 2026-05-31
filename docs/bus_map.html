@@ -509,7 +509,7 @@ function updateMarkers() {
     const color = currentDisplayMode === 'temp' ? getTempColor(stop.temp) : getSqmColor(stop.sqm);
     const marker = L.circleMarker([stop.lat, stop.lon], {
       renderer: canvasRenderer,
-      radius: 5.0,
+      radius: 7.0,
       fillColor: color, fillOpacity: 0.85,
       color: '#000000', weight: 0.5,
     });
@@ -566,10 +566,10 @@ function updateMarkers() {
       </div>`, { sticky: true, direction: 'auto', offset: [0, -5] });
 
     marker.on('mouseover', function() {
-      this.setStyle({ radius: 8.0, fillOpacity: 1.0, weight: 1.2, color: '#ffffff' });
+      this.setStyle({ radius: 10.0, fillOpacity: 1.0, weight: 1.2, color: '#ffffff' });
     });
     marker.on('mouseout', function() {
-      this.setStyle({ radius: 5.0, fillOpacity: 0.85, weight: 0.5, color: '#000000' });
+      this.setStyle({ radius: 7.0, fillOpacity: 0.85, weight: 0.5, color: '#000000' });
     });
     marker.on('dblclick', function(e) {
       L.DomEvent.stopPropagation(e);
