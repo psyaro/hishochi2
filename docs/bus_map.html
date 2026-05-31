@@ -245,7 +245,15 @@
 
 <div id="map">
   <div id="zoomIndicator">
-    🔍 バス停を表示するには、もう少しズームインしてください（気温: Lv.11〜 / 星空: Lv.10〜）
+    🔍 バス停を表示するには、もう少しズームインしてください（Lv.11以上）
+  </div>
+  <div id="limitWarning" style="
+    display:none; position:absolute; bottom:70px; left:50%; transform:translateX(-50%);
+    z-index:1000; background:rgba(255,160,0,0.92); color:#111; border-radius:10px;
+    padding:7px 16px; font-size:0.78rem; font-weight:600; pointer-events:none;
+    white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,0.4); backdrop-filter:blur(6px);
+  ">
+    ⚠️ 表示数が上限（4,000件）に達しています — ズームインすると全件表示されます
   </div>
   <div id="loading">
     <div class="spinner"></div>
@@ -478,8 +486,7 @@ function updateMarkers() {
   const zoom = map.getZoom();
   const indicator = document.getElementById('zoomIndicator');
   if (busStops.length === 0) return;
-  // SQMモード（星空）は田舎の広域表示が多いのでズーム10から許容
-  const minZoom = currentDisplayMode === 'sqm' ? 10 : 11;
+  const minZoom = 11;
   if (zoom < minZoom) {
     activeMarkers.clearLayers();
     indicator.style.opacity = '1';
@@ -495,7 +502,10 @@ function updateMarkers() {
   );
 
   activeMarkers.clearLayers();
-  visibleStops.slice(0, 4000).forEach(stop => {
+  const maxToRender = 4000;
+  const limitWarning = document.getElementById('limitWarning');
+  limitWarning.style.display = visibleStops.length > maxToRender ? 'block' : 'none';
+  visibleStops.slice(0, maxToRender).forEach(stop => {
     const color = currentDisplayMode === 'temp' ? getTempColor(stop.temp) : getSqmColor(stop.sqm);
     const marker = L.circleMarker([stop.lat, stop.lon], {
       renderer: canvasRenderer,
