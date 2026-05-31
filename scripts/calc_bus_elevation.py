@@ -202,6 +202,9 @@ def save_outputs(df: pd.DataFrame):
         mn  = None if (row.is_ocean or not np.isfinite(row.elev_min_m)) else row.elev_min_m
         tmp = None if (row.is_ocean or not np.isfinite(row.temp_max_aug)) else row.temp_max_aug
         sqm = None if (row.is_ocean or not np.isfinite(row.sqm)) else row.sqm
+        svf = None
+        if hasattr(row, "svf") and not row.is_ocean and np.isfinite(row.svf):
+            svf = row.svf
         payload.append({
             "name":     row.bus_stop_name,
             "operator": row.operator,
@@ -211,6 +214,7 @@ def save_outputs(df: pd.DataFrame):
             "min":      mn,
             "temp":     tmp,
             "sqm":      sqm,
+            "svf":      svf,
         })
 
     json_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
