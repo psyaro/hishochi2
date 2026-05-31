@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全国駅ボロノイ標高地図 — 最低標高</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="map-common.css?v=20260531"/>
+  <link rel="stylesheet" href="map-common.css?v=20260531c"/>
   <style>
     body {
       font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
@@ -269,14 +269,17 @@ function getBortleInfo(sqm) {
 }
 
 function getSvfInfo(svf) {
+  // svf = mean(1 - sin(H_i)) … 各方向で仰角 H 以上の空が見える割合の平均
+  // H=0°→1.0、H=14°(500m山が2km先)→0.76、H=30°(深い谷)→0.50
   if (svf == null) return null;
   const pct = Math.round(svf * 1000) / 10;  // 小数1桁%
   let icon, label;
-  if (svf >= 0.95)      { icon = '🌅'; label = '非常に開けた空'; }
-  else if (svf >= 0.88) { icon = '🔭'; label = '開けた空'; }
-  else if (svf >= 0.78) { icon = '⛰️'; label = 'やや開けた空'; }
-  else if (svf >= 0.65) { icon = '🏔️'; label = '山間・谷間の空'; }
-  else                  { icon = '🗻'; label = '囲まれた空'; }
+  if (svf >= 0.93)      { icon = '🌅'; label = '平野・沿岸部（広大な空）'; }
+  else if (svf >= 0.85) { icon = '🔭'; label = '起伏の少ない地形'; }
+  else if (svf >= 0.75) { icon = '🏕️'; label = '丘陵・やや起伏あり'; }
+  else if (svf >= 0.62) { icon = '⛰️'; label = '山がちな地形'; }
+  else if (svf >= 0.48) { icon = '🏔️'; label = '山間・谷間'; }
+  else                  { icon = '🗻'; label = '深い谷・盆地'; }
   return { pct, icon, label };
 }
 
@@ -353,7 +356,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 // ── GeoJSON 読み込み ─────────────────────────────────────────────────────────
 let voronoiLayer = null;
 
-fetch('data/voronoi.geojson?v=20260531')
+fetch('data/voronoi.geojson?v=20260531c')
   .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
   .then(data => {
     document.getElementById('loading').style.display = 'none';

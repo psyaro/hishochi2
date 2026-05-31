@@ -50,15 +50,23 @@ def latlon_to_grid(lats, lons):
     return img_row, img_col
 
 
+R_EARTH = 6_371_000.0  # 地球半径 (m)
+
+
 def calc_svf(df: pd.DataFrame, elev_grid: np.ndarray) -> np.ndarray:
     """
     全駅について天空率 SVF を一括計算する。
 
-    処理フロー:
-      1. 各駅の標高を取得
-      2. N_DIRS 方向 × N_STEPS ステップのレイキャスティング
-      3. 各方向の最大地平線仰角を追跡
-      4. SVF = mean(cos²(max_horizon_angle)) を返す
+    sky_openness の定義（方向ごとの可視空割合の平均）:
+      sky_openness = (1/N_DIRS) × Σ (1 - sin(H_i))
+      H_i: 方向 i の最大地平線仰角 (radians)
+      完全な平地: 1.0 / H=14°（500m山が2km先）: 0.76 / H=30°（深い谷）: 0.50
+      根拠: 仰角 H 以上の天球立体角割合 = ∫_H^{π/2} cos(α)dα = 1 - sin(H)
+
+    地球曲率補正:
+      距離 d の地点では地球の曲率により見かけ上 d²/(2R) だけ沈んで見える。
+      補正なしだと遠方地形を過大評価しSVFが低くなりすぎる。
+      corrected_elev_diff = elev_diff - d²/(2R)
     """
     lats = df["lat"].to_numpy()
     lons = df["lon"].to_numpy()
@@ -74,30 +82,29 @@ def calc_svf(df: pd.DataFrame, elev_grid: np.ndarray) -> np.ndarray:
     # max_horizon[station, dir] = 各方向の最大地平線仰角 (radians)
     max_horizon = np.zeros((N, N_DIRS), dtype=np.float32)
 
-    # 経度方向の1km当たり度数（各駅の緯度で補正）
-    # cos(lat) の配列 shape: (N,)
     cos_lat = np.cos(np.radians(lats))
+
+    # 各ステップの距離と曲率補正量を事前計算
+    step_dists_m = np.arange(1, n_steps + 1) * STEP_KM * 1000.0  # shape: (n_steps,)
+    curvature_drop = step_dists_m ** 2 / (2.0 * R_EARTH)          # shape: (n_steps,)
 
     print(f"  レイキャスティング: {N_DIRS}方向 × {n_steps}ステップ = {N_DIRS * n_steps} 反復")
     t0 = time.time()
 
     for di, az in enumerate(azimuths):
-        cos_az = np.cos(az)  # 北方向成分
-        sin_az = np.sin(az)  # 東方向成分
+        cos_az = np.cos(az)
+        sin_az = np.sin(az)
 
         for si in range(1, n_steps + 1):
             dist_km = si * STEP_KM
-            dist_m  = dist_km * 1000.0
+            dist_m  = step_dists_m[si - 1]
 
-            # 各駅のサンプル点 (degree)
             dlat = dist_km / 111.0 * cos_az
-            # 経度方向は cos(lat) で1度当たりのkm数が変わる
             dlon = dist_km / 111.0 * sin_az / cos_lat
 
             sample_lats = lats + dlat
             sample_lons = lons + dlon
 
-            # 範囲内チェック
             in_range = (
                 (sample_lats >= MIN_LAT) & (sample_lats <= MAX_LAT) &
                 (sample_lons >= MIN_LON) & (sample_lons <= MAX_LON)
@@ -106,24 +113,27 @@ def calc_svf(df: pd.DataFrame, elev_grid: np.ndarray) -> np.ndarray:
             s_img_row, s_img_col = latlon_to_grid(sample_lats, sample_lons)
             sample_elev = elev_grid[s_img_row, s_img_col].astype(float)
 
-            # 地平線仰角 (atan2 で符号付き、遮蔽は正値のみ)
-            elev_diff = sample_elev - station_elev
-            horizon_angle = np.arctan2(elev_diff, dist_m)  # radians
+            # 地球曲率補正: 遠い地点は見かけ上低く見える
+            elev_diff = (sample_elev - station_elev) - curvature_drop[si - 1]
+            horizon_angle = np.arctan2(elev_diff, dist_m)
 
-            # 範囲外 or 地表より低い箇所は無視
+            # 範囲外 or 地平線より低い場合は遮蔽なし
             horizon_angle = np.where(in_range & (horizon_angle > 0), horizon_angle, 0.0)
 
-            # 各方向の最大仰角を更新
             np.maximum(max_horizon[:, di], horizon_angle, out=max_horizon[:, di])
 
         if (di + 1) % 4 == 0:
             elapsed = time.time() - t0
             print(f"  方向 {di+1:2d}/{N_DIRS} 完了 ({elapsed:.1f}s)")
 
-    # SVF = (1/N_DIRS) × Σ cos²(最大仰角)
-    svf = np.mean(np.cos(max_horizon.astype(np.float64)) ** 2, axis=1)
+    # sky_openness = (1/N_DIRS) × Σ (1 - sin(最大仰角))
+    #
+    # 導出: 仰角 H 以上の天球立体角 = ∫_H^{π/2} cos(α)dα = 1 - sin(H)
+    # つまり「仰角 H 以上の空の割合」= 1 - sin(H)  (H=0→1.0, H=30°→0.5)
+    # cos²(H) は地表放射フラックス計算用の重みで、空の可視割合には不適切。
+    svf = np.mean(1.0 - np.sin(max_horizon.astype(np.float64)), axis=1)
     svf = np.clip(svf, 0.0, 1.0)
-    print(f"  SVF計算完了 (総時間 {time.time()-t0:.1f}s)")
+    print(f"  sky_openness計算完了 (総時間 {time.time()-t0:.1f}s)")
     return svf.astype(np.float32)
 
 
