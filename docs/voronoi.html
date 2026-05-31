@@ -72,17 +72,35 @@
       background: rgba(24,24,27,0.92);
       border: 1px solid #333;
       border-radius: 12px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       min-width: 130px;
-      pointer-events: none;
+      pointer-events: auto;
+    }
+    .legend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: default;
     }
     .legend h3 {
       font-size: 0.72rem;
       color: #aaa;
       text-transform: uppercase;
       letter-spacing: .5px;
-      margin-bottom: 8px;
+      margin: 0;
     }
+    .legend-toggle {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 0.7rem;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .legend-body { margin-top: 8px; }
+    .legend-body.collapsed { display: none; }
     .legend-bar {
       width: 100%;
       height: 14px;
@@ -94,6 +112,12 @@
       justify-content: space-between;
       font-size: 0.68rem;
       color: #aaa;
+    }
+    @media (max-width: 600px) {
+      .legend { min-width: 110px; padding: 8px 10px; }
+      .legend-header { cursor: pointer; }
+      .leaflet-control-attribution { font-size: 9px !important; max-width: 55vw !important; }
+      .leaflet-bottom.leaflet-left { bottom: 18px !important; }
     }
 
     /* ポップアップ内スタイル */
@@ -266,9 +290,10 @@ function getFeatureStyle(feature) {
 const map = L.map('map', {
   center: [36.35, 138.60],
   zoom: 12,
-  zoomControl: true,
+  zoomControl: false,
   attributionControl: true,
 });
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -366,9 +391,14 @@ fetch('data/voronoi.geojson')
   });
 
 // ── 凡例 ─────────────────────────────────────────────────────────────────────
+const isMobile = () => window.matchMedia('(max-width: 600px)').matches;
+let legendCollapsed = isMobile();
+
 const legendDiv = L.control({ position: 'bottomright' });
 legendDiv.onAdd = () => {
   const div = L.DomUtil.create('div', 'legend');
+  L.DomEvent.disableClickPropagation(div);
+  L.DomEvent.disableScrollPropagation(div);
   setTimeout(() => updateLegend(), 50);
   return div;
 };
@@ -383,10 +413,15 @@ const SQM_LABELS = [
 function updateLegend() {
   const el = document.querySelector('.legend');
   if (!el) return;
+  const collapsed = legendCollapsed;
+  const arrow = collapsed ? '▶' : '▼';
+
+  let bodyHtml = '';
+  let title = '';
   if (currentDisplayMode === 'elev') {
+    title = '最低標高';
     const gradStops = COLOR_STOPS.map(([, c]) => `rgb(${c.join(',')})`).join(',');
-    el.innerHTML = `
-      <h3>最低標高</h3>
+    bodyHtml = `
       <div class="legend-bar" style="background:linear-gradient(to right,${gradStops})"></div>
       <div class="legend-labels">
         <span>${COLOR_STOPS[0][0]}m</span>
@@ -394,15 +429,34 @@ function updateLegend() {
         <span>${COLOR_STOPS[COLOR_STOPS.length-1][0]}m</span>
       </div>`;
   } else {
-    let html = `<h3>星空の明るさ (mag)</h3><div style="max-height:160px;overflow-y:auto;padding-right:4px;">`;
+    title = '星空の明るさ (mag)';
+    bodyHtml = `<div style="max-height:140px;overflow-y:auto;padding-right:4px;">`;
     SQM_COLOR_STOPS.forEach((stop, i) => {
-      html += `<div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;margin-bottom:3px;color:#aaa;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${stop.color};border:0.5px solid #444;"></span>
+      bodyHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:0.67rem;margin-bottom:3px;color:#aaa;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
         <span>${SQM_LABELS[i]}</span></div>`;
     });
-    html += '</div>';
-    el.innerHTML = html;
+    bodyHtml += '</div>';
   }
+
+  el.innerHTML = `
+    <div class="legend-header" id="legendHeader">
+      <h3>${title}</h3>
+      <button class="legend-toggle" id="legendToggleBtn">${arrow}</button>
+    </div>
+    <div class="legend-body${collapsed ? ' collapsed' : ''}" id="legendBody">
+      ${bodyHtml}
+    </div>`;
+
+  document.getElementById('legendToggleBtn').addEventListener('click', () => {
+    legendCollapsed = !legendCollapsed;
+    updateLegend();
+  });
+  document.getElementById('legendHeader').addEventListener('click', (e) => {
+    if (e.target.id === 'legendToggleBtn') return;
+    legendCollapsed = !legendCollapsed;
+    updateLegend();
+  });
 }
 
 // ── 星空ボタン（Leaflet コントロール） ───────────────────────────────────────

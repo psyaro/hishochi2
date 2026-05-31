@@ -214,6 +214,18 @@
       cursor: pointer;
     }
     #loading .progress-text { font-size: 0.78rem; color: #8b949e; margin-top: 6px; }
+
+    /* スマホ：フッター2行対策 — 出典を小さく抑える */
+    @media (max-width: 600px) {
+      .leaflet-control-attribution {
+        font-size: 9px !important;
+        max-width: 55vw !important;
+      }
+      /* bottomleft スタックが出典に隠れないよう少し余白 */
+      .leaflet-bottom.leaflet-left {
+        bottom: 18px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -233,7 +245,7 @@
 
 <div id="map">
   <div id="zoomIndicator">
-    🔍 バス停を表示するには、地図をより詳細にズームインしてください (Lv.12以上)
+    🔍 バス停を表示するには、もう少しズームインしてください（気温: Lv.11〜 / 星空: Lv.10〜）
   </div>
   <div id="loading">
     <div class="spinner"></div>
@@ -447,12 +459,28 @@ fetch('data/bus_elevation.json.gz')
        <p style="font-size:0.8rem;color:#8b949e;margin-top:8px;">${err.message}</p>`;
   });
 
+// ── 気温コメント ──────────────────────────────────────────────────────────────
+function getTempComment(temp) {
+  if (temp == null) return null;
+  if (temp < 18) return { icon: '🏔️', text: '極寒の避暑地 — 真夏でも涼しい高原' };
+  if (temp < 20) return { icon: '❄️', text: '超涼しい — 避暑地として最高クラス' };
+  if (temp < 22) return { icon: '🌲', text: '涼しい — 快適な夏を過ごせます' };
+  if (temp < 24) return { icon: '🏡', text: '快適な避暑地' };
+  if (temp < 26) return { icon: '😊', text: '概ね快適 — 日陰は涼しい' };
+  if (temp < 28) return { icon: '☀️', text: '温暖 — 平地より幾分涼しい' };
+  if (temp < 30) return { icon: '🌡️', text: '暑い — 夏の暑さがある地域' };
+  if (temp < 32) return { icon: '🔥', text: '猛暑 — 熱中症に注意' };
+  return { icon: '🚨', text: '酷暑 — 熱中症危険レベル' };
+}
+
 // ── マーカー描画 ──────────────────────────────────────────────────────────────
 function updateMarkers() {
   const zoom = map.getZoom();
   const indicator = document.getElementById('zoomIndicator');
   if (busStops.length === 0) return;
-  if (zoom < 12) {
+  // SQMモード（星空）は田舎の広域表示が多いのでズーム10から許容
+  const minZoom = currentDisplayMode === 'sqm' ? 10 : 11;
+  if (zoom < minZoom) {
     activeMarkers.clearLayers();
     indicator.style.opacity = '1';
     return;
@@ -481,10 +509,21 @@ function updateMarkers() {
     const tempStr = stop.temp != null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
     const sqmStr  = stop.sqm  != null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
     const bortle  = getBortleInfo(stop.sqm);
-    const starComment = stop.sqm != null ? `
-      <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
-        🌟 <strong>${bortle.label}</strong>
-      </div>` : '';
+    const modeComment = (() => {
+      if (currentDisplayMode === 'sqm' && stop.sqm != null) {
+        return `<div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
+          🌟 <strong>${bortle.label}</strong>
+        </div>`;
+      }
+      if (currentDisplayMode === 'temp') {
+        const tc = getTempComment(stop.temp);
+        if (!tc) return '';
+        return `<div style="margin-top:8px;font-size:0.72rem;color:${color};border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
+          ${tc.icon} <strong>${tc.text}</strong>
+        </div>`;
+      }
+      return '';
+    })();
 
     marker.bindTooltip(`
       <div style="font-family:'Outfit','Noto Sans JP',sans-serif;padding:10px 14px;min-width:200px;line-height:1.4;">
@@ -510,7 +549,7 @@ function updateMarkers() {
             <strong style="font-size:1.1rem;font-weight:800;color:#a78bfa;">${sqmStr}</strong>
           </div>
         </div>
-        ${starComment}
+        ${modeComment}
         <div style="margin-top:8px;border-top:1px dashed rgba(240,246,252,0.15);padding-top:6px;font-size:0.65rem;color:#8b949e;text-align:center;font-style:italic;">
           🖱️ ダブルクリックで Google Map を開く
         </div>
