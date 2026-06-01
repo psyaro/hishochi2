@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>全国バス停標高＆最高気温地図 — 避暑地マップ</title>
+  <title>全国バス停 星空マップ — 光害・天の川可視性</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="map-common.css?v=20260531m"/>
   <style>
     body {
       font-family: 'Outfit', 'Noto Sans JP', sans-serif;
-      background: #0d1117;
+      background: #060a12;
       color: #f0f6fc;
       height: 100dvh;
       display: flex;
@@ -21,20 +21,20 @@
     /* ── ヘッダー ── */
     header {
       flex-shrink: 0;
-      background: #161b22;
-      border-bottom: 1px solid rgba(240, 246, 252, 0.1);
+      background: #0d1117;
+      border-bottom: 1px solid rgba(167, 139, 250, 0.2);
       padding: 8px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
       z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
       flex-wrap: wrap;
     }
     header h1 {
       font-size: 1.05rem;
       font-weight: 800;
-      background: linear-gradient(90deg, #a78bfa, #f472b6);
+      background: linear-gradient(90deg, #818cf8, #c084fc, #38bdf8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       white-space: nowrap;
@@ -48,7 +48,7 @@
     }
     header .back-btn {
       font-size: 0.78rem;
-      color: #58a6ff;
+      color: #818cf8;
       text-decoration: none;
       white-space: nowrap;
       margin-left: auto;
@@ -57,7 +57,26 @@
       gap: 4px;
       transition: color 0.2s;
     }
-    header .back-btn:hover { color: #8bc1ff; text-decoration: underline; }
+    header .back-btn:hover { color: #a5b4fc; text-decoration: underline; }
+
+    .sky-info-header-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(129, 140, 248, 0.12);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      color: #818cf8;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      user-select: none;
+    }
+    .sky-info-header-btn:hover {
+      background: rgba(129, 140, 248, 0.25);
+    }
 
     /* ── クマ出没トグル ── */
     .bear-toggle-btn {
@@ -82,14 +101,13 @@
     }
     .bear-toggle-btn input { display: none; }
 
-    /* スマホ：サブタイトル非表示、1行に収める */
     @media (max-width: 600px) {
       header p { display: none; }
       header { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; }
       header h1 { font-size: 0.82rem; }
-      .toggle-label { font-size: 0.7rem; }
       header .back-btn { font-size: 0.7rem; }
       .bear-toggle-btn { font-size: 0.68rem; padding: 3px 8px; }
+      .sky-info-header-btn { font-size: 0.68rem; padding: 3px 8px; }
     }
 
     /* ── 地図 ── */
@@ -106,11 +124,11 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
-      background: rgba(22, 27, 34, 0.95);
-      border: 1px dashed rgba(167, 139, 250, 0.4);
+      background: rgba(13, 17, 23, 0.95);
+      border: 1px dashed rgba(129, 140, 248, 0.4);
       border-radius: 12px;
       padding: 8px 16px;
-      color: #a78bfa;
+      color: #818cf8;
       font-size: 0.82rem;
       pointer-events: none;
       text-align: center;
@@ -122,31 +140,31 @@
 
     /* ── Leaflet ツールチップ ── */
     .leaflet-tooltip {
-      background: #161b22 !important;
+      background: #0d1117 !important;
       color: #f0f6fc !important;
-      border: 1px solid rgba(240, 246, 252, 0.15) !important;
+      border: 1px solid rgba(129, 140, 248, 0.25) !important;
       border-radius: 8px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
-      opacity: 0.95 !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+      opacity: 0.97 !important;
       padding: 0 !important;
     }
     .leaflet-tooltip-top::before {
-      border-top-color: #161b22 !important;
+      border-top-color: #0d1117 !important;
     }
     /* ポップアップが開いている間はツールチップを非表示 */
     #map.popup-open .leaflet-tooltip { display: none !important; }
 
     /* ── Leaflet ポップアップ ── */
     .leaflet-popup-content-wrapper {
-      background: #161b22 !important;
+      background: #0d1117 !important;
       color: #f0f6fc !important;
-      border: 1px solid rgba(240, 246, 252, 0.15) !important;
+      border: 1px solid rgba(129, 140, 248, 0.25) !important;
       border-radius: 10px !important;
       box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
       padding: 0 !important;
     }
     .leaflet-popup-content { margin: 0 !important; }
-    .leaflet-popup-tip { background: #161b22 !important; }
+    .leaflet-popup-tip { background: #0d1117 !important; }
     .leaflet-popup-close-button {
       color: #8b949e !important;
       font-size: 18px !important;
@@ -157,8 +175,8 @@
 
     /* ── 凡例 ── */
     .legend {
-      background: rgba(22, 27, 34, 0.95);
-      border: 1px solid rgba(240, 246, 252, 0.1);
+      background: rgba(13, 17, 23, 0.95);
+      border: 1px solid rgba(129, 140, 248, 0.15);
       border-radius: 14px;
       padding: 10px 12px;
       min-width: 148px;
@@ -175,7 +193,7 @@
     }
     .legend h3 {
       font-size: 0.72rem;
-      color: #8b949e;
+      color: #818cf8;
       text-transform: uppercase;
       letter-spacing: .5px;
       margin: 0;
@@ -200,16 +218,17 @@
       color: #c9d1d9;
       margin-bottom: 5px;
     }
-    /* スマホ：凡例をデフォルト折りたたみ */
     @media (max-width: 600px) {
       .legend { min-width: 120px; padding: 8px 10px; }
       .legend-header { cursor: pointer; }
+      .leaflet-control-attribution { font-size: 9px !important; max-width: 55vw !important; }
+      .leaflet-bottom.leaflet-left { bottom: 18px !important; }
     }
 
     /* ── 不透明度コントロール ── */
     .opacity-control {
-      background: rgba(22, 27, 34, 0.95) !important;
-      border: 1px solid rgba(240, 246, 252, 0.1) !important;
+      background: rgba(13, 17, 23, 0.95) !important;
+      border: 1px solid rgba(129, 140, 248, 0.15) !important;
       border-radius: 12px !important;
       padding: 10px 14px !important;
       min-width: 160px !important;
@@ -219,7 +238,7 @@
     }
     .opacity-control h3 {
       font-size: 0.7rem !important;
-      color: #8b949e !important;
+      color: #818cf8 !important;
       text-transform: uppercase !important;
       letter-spacing: .5px !important;
       margin-bottom: 6px !important;
@@ -229,7 +248,7 @@
       -webkit-appearance: none !important;
       width: 100% !important;
       height: 6px !important;
-      background: rgba(240, 246, 252, 0.15) !important;
+      background: rgba(129, 140, 248, 0.15) !important;
       border-radius: 3px !important;
       outline: none !important;
       cursor: pointer !important;
@@ -239,52 +258,30 @@
       width: 14px !important;
       height: 14px !important;
       border-radius: 50% !important;
-      background: #a78bfa !important;
-      box-shadow: 0 0 8px rgba(167, 139, 250, 0.6) !important;
+      background: #818cf8 !important;
+      box-shadow: 0 0 8px rgba(129, 140, 248, 0.6) !important;
     }
 
     /* ── レイヤーコントロール ── */
     .leaflet-control-layers {
-      background: rgba(22, 27, 34, 0.95) !important;
+      background: rgba(13, 17, 23, 0.95) !important;
       color: #c9d1d9 !important;
-      border: 1px solid rgba(240, 246, 252, 0.1) !important;
+      border: 1px solid rgba(129, 140, 248, 0.15) !important;
       border-radius: 8px !important;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
       font-family: inherit !important;
       font-size: 0.8rem !important;
     }
-    .leaflet-control-layers-list label {
-      margin-bottom: 4px;
-      display: block;
-      cursor: pointer;
-    }
+    .leaflet-control-layers-list label { margin-bottom: 4px; display: block; cursor: pointer; }
     #loading .progress-text { font-size: 0.78rem; color: #8b949e; margin-top: 6px; }
-
-    /* スマホ：フッター2行対策 — 出典を小さく抑える */
-    @media (max-width: 600px) {
-      .leaflet-control-attribution {
-        font-size: 9px !important;
-        max-width: 55vw !important;
-      }
-      /* bottomleft スタックが出典に隠れないよう少し余白 */
-      .leaflet-bottom.leaflet-left {
-        bottom: 18px !important;
-      }
-    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>全国バス停標高＆最高気温地図</h1>
-  <p id="headerDesc">8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット</p>
-  <div class="toggle-container">
-    <span class="toggle-label" id="modeText">8月最高気温 🌡️</span>
-    <label class="switch">
-      <input type="checkbox" id="colorModeToggle">
-      <span class="slider"></span>
-    </label>
-  </div>
+  <h1>🌌 全国バス停 星空マップ</h1>
+  <p id="headerDesc">星空の明るさ（SQM値）に応じたカラープロット — 光害・天の川可視性</p>
+  <button class="sky-info-header-btn" id="skyInfoBtn">🔭 ボートル・スケール解説</button>
   <label class="bear-toggle-btn" id="bearToggleBtn" title="このデータは汎用投稿システムからのベータ版です">
     <input type="checkbox" id="bearToggle"> 🐻 クマ出没 <span style="font-size:0.65rem;color:#fca5a5;font-weight:700;margin-left:2px;">BETA</span>
   </label>
@@ -306,11 +303,11 @@
   <div id="loading">
     <div class="spinner"></div>
     <p>全国 28万件のバス停データを読み込み中…</p>
-    <div class="progress-text" id="progressText">圧縮データ(5.6MB)をダウンロード中...</div>
+    <div class="progress-text" id="progressText">圧縮データをダウンロード中...</div>
   </div>
 </div>
 
-<!-- 星空解説モーダル -->
+<!-- ボートル・スケール解説モーダル -->
 <div class="modal-overlay" id="skyModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -355,18 +352,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ── カラーマップ ─────────────────────────────────────────────────────────────
-const TEMP_COLORS = [
-  { max: 18.0, color: '#00e5ff', label: '18℃以下 (極寒避暑地 ❄️)' },
-  { max: 20.0, color: '#00b0ff', label: '18〜20℃ (超涼しい)' },
-  { max: 22.0, color: '#1de9b6', label: '20〜22℃ (涼しい)' },
-  { max: 24.0, color: '#00e676', label: '22〜24℃ (快適避暑地)' },
-  { max: 26.0, color: '#c6ff00', label: '24〜26℃ (快適)' },
-  { max: 28.0, color: '#ffd600', label: '26〜28℃ (温暖)' },
-  { max: 30.0, color: '#ffab00', label: '28〜30℃ (暑い)' },
-  { max: 32.0, color: '#ff6d00', label: '30〜32℃ (猛暑)' },
-  { max: 99.0, color: '#dd2c00', label: '32℃以上 (酷暑 🔥)' },
-];
-
 const SQM_COLOR_STOPS = [
   { max: 17.0, color: '#ffffff' },
   { max: 17.5, color: '#ffe4e1' },
@@ -393,12 +378,6 @@ function getSqmColor(sqm) {
   if (sqm == null) return 'rgba(80,80,80,0.4)';
   for (const s of SQM_COLOR_STOPS) { if (sqm <= s.max) return s.color; }
   return '#311b92';
-}
-
-function getTempColor(temp) {
-  if (temp == null) return '#888888';
-  for (const item of TEMP_COLORS) { if (temp <= item.max) return item.color; }
-  return '#ff0844';
 }
 
 function getBortleInfo(sqm) {
@@ -433,35 +412,27 @@ const map = L.map('map', {
   zoomControl: false,
   attributionControl: true,
 });
-// ズームコントロールを右下に配置（ツールチップと左上で干渉しないよう）
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 const baseMaps = {
+  "ダークテーマ (CartoDB) ★推奨": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd', maxZoom: 19
+  }),
   "普通のOSM (標準地図)": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }),
-  "地理院地図 (標準)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
   }),
   "地理院地図 (淡色/薄め)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
   }),
-  "地理院地図 (色別標高図)": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', {
-    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>',
-    maxNativeZoom: 15
-  }),
-  "ダークテーマ (CartoDB)": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 19
-  }),
 };
 
-baseMaps["地理院地図 (淡色/薄め)"].addTo(map);
+baseMaps["ダークテーマ (CartoDB) ★推奨"].addTo(map);
 L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
-// ── 不透明度スライダー（bottomleft） ─────────────────────────────────────────
+// ── 不透明度スライダー ─────────────────────────────────────────────────────
 let currentOpacity = 1.0;
-let currentBaseLayer = baseMaps["地理院地図 (淡色/薄め)"];
+let currentBaseLayer = baseMaps["ダークテーマ (CartoDB) ★推奨"];
 
 const opacityControl = L.control({ position: 'bottomleft' });
 opacityControl.onAdd = function() {
@@ -478,7 +449,6 @@ opacityControl.onAdd = function() {
 };
 opacityControl.addTo(map);
 
-// addTo 後に DOM が存在するのでリスナーを登録
 document.getElementById('opacitySlider').addEventListener('input', function(e) {
   currentOpacity = parseFloat(e.target.value);
   document.getElementById('opacityVal').textContent = `${Math.round(currentOpacity * 100)}%`;
@@ -490,52 +460,10 @@ map.on('baselayerchange', function(e) {
   currentBaseLayer.setOpacity(currentOpacity);
 });
 
-// ── 気温フィルターコントロール（bottomleft） ───────────────────────────────────
-let maxTempFilter = 40;  // 初期値：40℃以下（フィルターなし相当）
-
-const tempFilterControl = L.control({ position: 'bottomleft' });
-tempFilterControl.onAdd = function() {
-  const div = L.DomUtil.create('div', 'opacity-control');
-  let optionsHtml = '<option value="40">全件</option>';
-  for (let t = 35; t >= 18; t--) {
-    optionsHtml += `<option value="${t}">${t}℃以下</option>`;
-  }
-
-  div.innerHTML = `
-    <h3>気温でフィルター</h3>
-    <select id="tempSelect" style="padding:4px 6px;font-size:0.8rem;border:1px solid #666;background:#333;color:#ccc;border-radius:3px;cursor:pointer;">
-      ${optionsHtml}
-    </select>`;
-  L.DomEvent.disableClickPropagation(div);
-  L.DomEvent.disableScrollPropagation(div);
-  return div;
-};
-tempFilterControl.addTo(map);
-
-document.getElementById('tempSelect').addEventListener('change', function(e) {
-  maxTempFilter = parseInt(e.target.value);
-  updateMarkers();
-});
-
-// ── 星空ボタン（bottomleft・スライダーの上に積む） ───────────────────────────
-const skyBtnControl = L.control({ position: 'bottomleft' });
-skyBtnControl.onAdd = function() {
-  const btn = L.DomUtil.create('button', 'sky-info-btn');
-  btn.id = 'skyInfoBtn';
-  btn.innerHTML = '🌌 星空・光害の解説 & クレジット';
-  btn.style.display = 'none';  // 初期は非表示（tempモード）
-  L.DomEvent.disableClickPropagation(btn);
-  L.DomEvent.disableScrollPropagation(btn);
-  btn.addEventListener('click', () => document.getElementById('skyModal').classList.add('active'));
-  return btn;
-};
-skyBtnControl.addTo(map);
-
 // ── データ読み込み ────────────────────────────────────────────────────────────
 let busStops = [];
-let currentDisplayMode = 'temp';
 let activeMarkers = L.layerGroup().addTo(map);
-let currentOpenPopup = null;  // 現在開いているポップアップを追跡
+let currentOpenPopup = null;
 const canvasRenderer = L.canvas({ padding: 0.1 });
 
 fetch('data/bus_elevation.json.gz?v=20260531m')
@@ -558,20 +486,6 @@ fetch('data/bus_elevation.json.gz?v=20260531m')
        <p style="font-size:0.8rem;color:#8b949e;margin-top:8px;">${err.message}</p>`;
   });
 
-// ── 気温コメント ──────────────────────────────────────────────────────────────
-function getTempComment(temp) {
-  if (temp == null) return null;
-  if (temp < 18) return { icon: '🏔️', text: '極寒の避暑地 — 真夏でも涼しい高原' };
-  if (temp < 20) return { icon: '❄️', text: '超涼しい — 避暑地として最高クラス' };
-  if (temp < 22) return { icon: '🌲', text: '涼しい — 快適な夏を過ごせます' };
-  if (temp < 24) return { icon: '🏡', text: '快適な避暑地' };
-  if (temp < 26) return { icon: '😊', text: '概ね快適 — 日陰は涼しい' };
-  if (temp < 28) return { icon: '☀️', text: '温暖 — 平地より幾分涼しい' };
-  if (temp < 30) return { icon: '🌡️', text: '暑い — 夏の暑さがある地域' };
-  if (temp < 32) return { icon: '🔥', text: '猛暑 — 熱中症に注意' };
-  return { icon: '🚨', text: '酷暑 — 熱中症危険レベル' };
-}
-
 // ── マーカー描画 ──────────────────────────────────────────────────────────────
 function updateMarkers() {
   const zoom = map.getZoom();
@@ -589,16 +503,16 @@ function updateMarkers() {
   const pad = 0.02;
   const visibleStops = busStops.filter(s =>
     s.lat >= bounds.getSouth() - pad && s.lat <= bounds.getNorth() + pad &&
-    s.lon >= bounds.getWest()  - pad && s.lon <= bounds.getEast()  + pad &&
-    (maxTempFilter === 40 || (s.temp != null && s.temp <= maxTempFilter))
+    s.lon >= bounds.getWest()  - pad && s.lon <= bounds.getEast()  + pad
   );
 
   activeMarkers.clearLayers();
   const maxToRender = 4000;
   const limitWarning = document.getElementById('limitWarning');
   limitWarning.style.display = visibleStops.length > maxToRender ? 'block' : 'none';
+
   visibleStops.slice(0, maxToRender).forEach(stop => {
-    const color = currentDisplayMode === 'temp' ? getTempColor(stop.temp) : getSqmColor(stop.sqm);
+    const color = getSqmColor(stop.sqm);
     const marker = L.circleMarker([stop.lat, stop.lon], {
       renderer: canvasRenderer,
       radius: 9.0,
@@ -608,10 +522,11 @@ function updateMarkers() {
 
     const avgStr  = stop.avg  != null ? `${stop.avg.toFixed(1)} m`  : 'N/A';
     const minStr  = stop.min  != null ? `${stop.min.toFixed(1)} m`  : 'N/A';
-    const tempStr = stop.temp != null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
     const sqmStr  = stop.sqm  != null ? `${stop.sqm.toFixed(2)} mag` : 'N/A';
+    const tempStr = stop.temp != null ? `${stop.temp.toFixed(1)} ℃` : 'N/A';
     const bortle  = getBortleInfo(stop.sqm);
     const svfInfo = getSvfInfo(stop.svf);
+
     const svfBlock = svfInfo != null ? `
       <div style="margin-top:6px;border-top:1px solid rgba(99,179,237,0.2);padding-top:6px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -623,28 +538,30 @@ function updateMarkers() {
         </div>
         <div style="text-align:right;font-size:1rem;font-weight:700;color:#63b3ed;">${svfInfo.pct}<span style="font-size:0.72rem;color:#8b949e;"> %</span></div>
       </div>` : '';
-    const modeComment = (() => {
-      if (currentDisplayMode === 'sqm' && stop.sqm != null) {
-        return `<div style="margin-top:8px;font-size:0.72rem;color:#a78bfa;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
-          🌟 <strong>${bortle.label}</strong>
-        </div>`;
-      }
-      if (currentDisplayMode === 'temp') {
-        const tc = getTempComment(stop.temp);
-        if (!tc) return '';
-        return `<div style="margin-top:8px;font-size:0.72rem;color:${color};border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
-          ${tc.icon} <strong>${tc.text}</strong>
-        </div>`;
-      }
-      return '';
-    })();
+
+    const bortleBlock = stop.sqm != null ? `
+      <div style="margin-top:8px;font-size:0.72rem;color:#818cf8;border-top:1px solid rgba(240,246,252,0.1);padding-top:8px;text-align:left;">
+        🌟 <strong>${bortle.label}</strong>
+      </div>
+      <div style="margin-top:4px;font-size:0.7rem;color:#8b949e;line-height:1.4;">${bortle.desc}</div>` : '';
 
     const searchQuery = `${stop.name} ${stop.operator} 時刻`;
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
     const popupHtml = `
-      <div style="font-family:'Outfit','Noto Sans JP',sans-serif;padding:10px 14px;min-width:200px;line-height:1.4;">
+      <div style="font-family:'Outfit','Noto Sans JP',sans-serif;padding:10px 14px;min-width:210px;line-height:1.4;">
         <strong style="font-size:0.95rem;color:#c084fc;display:block;margin-bottom:2px;">${stop.name}</strong>
         <span style="font-size:0.75rem;color:#8b949e;display:block;margin-bottom:8px;">${stop.operator}</span>
+        <div style="display:flex;gap:16px;margin-top:6px;border-top:1px solid rgba(240,246,252,0.1);padding-top:6px;">
+          <div style="flex:1;">
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">星空の明るさ</span>
+            <strong style="font-size:1.2rem;font-weight:800;color:${color};">${sqmStr}</strong>
+          </div>
+          <div style="flex:1;border-left:1px solid rgba(240,246,252,0.1);padding-left:16px;">
+            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">8月最高気温</span>
+            <strong style="font-size:1rem;font-weight:700;color:#f0f6fc;">${tempStr}</strong>
+          </div>
+        </div>
         <div style="display:flex;gap:16px;margin-top:6px;border-top:1px solid rgba(240,246,252,0.1);padding-top:6px;">
           <div>
             <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">平均標高</span>
@@ -655,28 +572,16 @@ function updateMarkers() {
             <strong style="font-size:1rem;font-weight:700;color:#f0f6fc;">${minStr}</strong>
           </div>
         </div>
-        <div style="display:flex;gap:16px;margin-top:6px;border-top:1px solid rgba(240,246,252,0.1);padding-top:6px;">
-          <div style="flex:1;">
-            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">8月最高気温</span>
-            <strong style="font-size:1.1rem;font-weight:800;color:${color};">${tempStr}</strong>
-          </div>
-          <div style="flex:1;border-left:1px solid rgba(240,246,252,0.1);padding-left:16px;">
-            <span style="font-size:0.65rem;color:#8b949e;display:block;text-transform:uppercase;letter-spacing:0.5px;">星空の明るさ</span>
-            <strong style="font-size:1.1rem;font-weight:800;color:#a78bfa;">${sqmStr}</strong>
-          </div>
-        </div>
         ${svfBlock}
-        ${modeComment}
+        ${bortleBlock}
         <div style="margin-top:8px;border-top:1px dashed rgba(240,246,252,0.15);padding-top:6px;text-align:center;">
-          <a href="${searchUrl}" target="_blank" style="display:inline-block;padding:4px 10px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;text-decoration:none;font-size:0.75rem;font-weight:600;">
+          <a href="${searchUrl}" target="_blank" style="display:inline-block;padding:4px 10px;background:rgba(129,140,248,0.15);border:1px solid rgba(129,140,248,0.4);border-radius:6px;color:#818cf8;text-decoration:none;font-size:0.75rem;font-weight:600;">
             🔍 時刻表を検索
           </a>
         </div>
       </div>`;
 
-    // ホバー：ツールチップ（追従、プレビュー用）
     marker.bindTooltip(popupHtml, { sticky: true, direction: 'auto', offset: [0, -5] });
-    // クリック：ポップアップ（固定）
     marker.bindPopup(popupHtml, { maxWidth: 300, autoPan: false });
 
     marker.on('click', function(e) {
@@ -717,95 +622,61 @@ map.on('zoomend', updateMarkers);
 
 // ── 凡例 ─────────────────────────────────────────────────────────────────────
 const isMobile = () => window.matchMedia('(max-width: 600px)').matches;
-let legendCollapsed = isMobile(); // スマホはデフォルト折りたたみ
+let legendCollapsed = isMobile();
 
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function() {
   const div = L.DomUtil.create('div', 'legend');
   L.DomEvent.disableClickPropagation(div);
   L.DomEvent.disableScrollPropagation(div);
-  setTimeout(() => updateLegend(), 50);
+  setTimeout(() => buildLegend(), 50);
   return div;
 };
 legend.addTo(map);
 
-function updateLegend() {
+function buildLegend() {
   const el = document.querySelector('.legend');
   if (!el) return;
+  const arrow = legendCollapsed ? '▶' : '▼';
+  let bodyHtml = `<div style="max-height:160px;overflow-y:auto;padding-right:4px;">`;
+  SQM_COLOR_STOPS.forEach((stop, i) => {
+    bodyHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:0.67rem;margin-bottom:3px;color:#aaa;">
+      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
+      <span>${SQM_LABELS[i]}</span></div>`;
+  });
+  bodyHtml += `</div>`;
 
-  const collapsed = legendCollapsed;
-  const arrow = collapsed ? '▶' : '▼';
-
-  let bodyHtml = '';
-  if (currentDisplayMode === 'temp') {
-    TEMP_COLORS.forEach(item => {
-      bodyHtml += `<div class="legend-item">
-        <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
-        <span>${item.label}</span></div>`;
-    });
-  } else {
-    bodyHtml += `<div style="max-height:140px;overflow-y:auto;padding-right:4px;">`;
-    SQM_COLOR_STOPS.forEach((stop, i) => {
-      bodyHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:0.67rem;margin-bottom:3px;color:#aaa;">
-        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${stop.color};border:0.5px solid #444;flex-shrink:0;"></span>
-        <span>${SQM_LABELS[i]}</span></div>`;
-    });
-    bodyHtml += `</div>`;
-  }
-
-  const title = currentDisplayMode === 'temp' ? '8月最高気温' : '星空の明るさ (mag)';
   el.innerHTML = `
     <div class="legend-header" id="legendHeader">
-      <h3>${title}</h3>
+      <h3>星空の明るさ (mag)</h3>
       <button class="legend-toggle" id="legendToggleBtn">${arrow}</button>
     </div>
-    <div class="legend-body${collapsed ? ' collapsed' : ''}" id="legendBody">
+    <div class="legend-body${legendCollapsed ? ' collapsed' : ''}" id="legendBody">
       ${bodyHtml}
     </div>`;
 
   document.getElementById('legendToggleBtn').addEventListener('click', () => {
-    legendCollapsed = !legendCollapsed;
-    updateLegend();
+    legendCollapsed = !legendCollapsed; buildLegend();
   });
-  // スマホでヘッダー全体タップでも開閉
   document.getElementById('legendHeader').addEventListener('click', (e) => {
     if (e.target.id === 'legendToggleBtn') return;
-    legendCollapsed = !legendCollapsed;
-    updateLegend();
+    legendCollapsed = !legendCollapsed; buildLegend();
   });
 }
-
-// ── トグル ───────────────────────────────────────────────────────────────────
-document.getElementById('colorModeToggle').addEventListener('change', function(e) {
-  currentDisplayMode = e.target.checked ? 'sqm' : 'temp';
-  document.getElementById('modeText').textContent = e.target.checked ? '星空の明るさ 🌌' : '8月最高気温 🌡️';
-  const skyBtn = document.getElementById('skyInfoBtn');
-  if (skyBtn) skyBtn.style.display = e.target.checked ? '' : 'none';
-  const desc = document.getElementById('headerDesc');
-  if (desc) {
-    desc.textContent = currentDisplayMode === 'temp'
-      ? '8月最高気温の平年値（約1kmメッシュ換算）に応じたカラープロット'
-      : '星空の明るさ（SQM値）に応じたカラープロット（13段階細密段彩）';
-  }
-  updateLegend();
-  updateMarkers();
-});
 
 // ── 出典表記 ─────────────────────────────────────────────────────────────────
 map.attributionControl.addAttribution(
   'バス停: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P11-2022.html" target="_blank">国土交通省</a> / ' +
-  '気温: <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G02-2022.html" target="_blank">気象庁</a> / ' +
   '光害: <a href="https://doi.org/10.5880/GFZ.1.4.2016.001" target="_blank">Falchi et al. (ATLAS 2015)</a>'
 );
 
 // ── モーダル制御 ──────────────────────────────────────────────────────────────
 const skyModal = document.getElementById('skyModal');
+document.getElementById('skyInfoBtn').addEventListener('click', () => skyModal.classList.add('active'));
 document.getElementById('closeSkyModal').addEventListener('click', () => skyModal.classList.remove('active'));
 skyModal.addEventListener('click', e => { if (e.target === skyModal) skyModal.classList.remove('active'); });
 
 // ── クマ出没レイヤー ──────────────────────────────────────────────────────────
-
-// Leaflet Canvasに三角形描画を追加（バス停の円と形で区別）
 L.Canvas.include({
   _updateTriangle: function(layer) {
     if (!this._drawing || layer._empty()) return;
@@ -814,9 +685,9 @@ L.Canvas.include({
     const ctx = this._ctx;
     this._drawnLayers[layer._leaflet_id] = layer;
     ctx.beginPath();
-    ctx.moveTo(p.x,              p.y - r * 1.15);  // 頂点
-    ctx.lineTo(p.x + r * 1.0,   p.y + r * 0.65);  // 右下
-    ctx.lineTo(p.x - r * 1.0,   p.y + r * 0.65);  // 左下
+    ctx.moveTo(p.x,              p.y - r * 1.15);
+    ctx.lineTo(p.x + r * 1.0,   p.y + r * 0.65);
+    ctx.lineTo(p.x - r * 1.0,   p.y + r * 0.65);
     ctx.closePath();
     this._fillStroke(ctx, layer);
   }
@@ -835,8 +706,8 @@ function bearStyle(dateStr) {
   const ageYears = (Date.now() - new Date(dateStr).getTime()) / (365.25 * 24 * 3600 * 1000);
   const t = Math.min(Math.max(ageYears / 3, 0), 1);
   return {
-    radius:      Math.round(5 + (1 - t) * 4),    // 5〜9px
-    fillOpacity: 0.30 + (1 - t) * 0.60,           // 0.30〜0.90
+    radius:      Math.round(5 + (1 - t) * 4),
+    fillOpacity: 0.30 + (1 - t) * 0.60,
   };
 }
 
@@ -853,9 +724,9 @@ function renderBearLayer() {
     const marker = new TriangleMarker([lat, lon], {
       renderer:    bearRenderer,
       radius:      st.radius,
-      fillColor:   '#f97316',   // 警告オレンジ
+      fillColor:   '#f97316',
       fillOpacity: st.fillOpacity,
-      color:       '#1c0a00',   // 濃い茶色の縁
+      color:       '#1c0a00',
       weight:      1.5,
     });
 
@@ -878,7 +749,6 @@ function renderBearLayer() {
   bearLayer.addTo(map);
 }
 
-// クマ出没データのクレジット帰属を動的に追加/削除
 const BEAR_ATTRIBUTION = 'クマ出没: <a href="https://public.sharp9110.com/view/allposts/bear" target="_blank">Sharp9110</a> (CC0)';
 
 function loadBearData() {
